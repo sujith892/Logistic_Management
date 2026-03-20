@@ -246,10 +246,12 @@ body::before{
   content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
   border-radius:3px 0 0 3px;
 }
-.ship-card.status-pending::before{background:var(--yellow);box-shadow:0 0 8px var(--yellow);}
-.ship-card.status-transit::before{background:var(--accent);box-shadow:0 0 8px var(--accent);}
-.ship-card.status-delivered::before{background:var(--green);box-shadow:0 0 8px var(--green);}
-.ship-card.status-cancelled::before{background:var(--red);box-shadow:0 0 8px var(--red);}
+.ship-card.status-serviced::before  {background:#00ff88;box-shadow:0 0 8px #00ff88;}
+.ship-card.status-complete::before  {background:#00dc64;box-shadow:0 0 8px #00dc64;}
+.ship-card.status-pending::before   {background:var(--yellow);box-shadow:0 0 8px var(--yellow);}
+.ship-card.status-inprogress::before{background:#ffb400;box-shadow:0 0 8px #ffb400;}
+.ship-card.status-issue::before     {background:var(--red);box-shadow:0 0 8px var(--red);}
+.ship-card.status-missed::before    {background:#ff2040;box-shadow:0 0 8px #ff2040;}
 .ship-card:active{transform:scale(0.99);background:var(--border);}
 
 .ship-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;}
@@ -271,10 +273,15 @@ body::before{
   padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;
   letter-spacing:0.5px;text-transform:uppercase;flex-shrink:0;
 }
-.sb-pending{background:rgba(255,214,10,0.12);color:var(--yellow);border:1px solid rgba(255,214,10,0.2);}
-.sb-transit{background:rgba(0,212,255,0.12);color:var(--accent);border:1px solid rgba(0,212,255,0.2);}
-.sb-delivered{background:rgba(0,255,136,0.12);color:var(--green);border:1px solid rgba(0,255,136,0.2);}
-.sb-cancelled{background:rgba(255,71,87,0.12);color:var(--red);border:1px solid rgba(255,71,87,0.2);}
+/* Green statuses */
+.sb-serviced  {background:rgba(0,255,136,0.12);color:#00ff88;border:1px solid rgba(0,255,136,0.25);}
+.sb-complete  {background:rgba(0,220,100,0.12);color:#00dc64;border:1px solid rgba(0,220,100,0.25);}
+/* Yellow statuses */
+.sb-pending   {background:rgba(255,214,10,0.12);color:#ffd60a;border:1px solid rgba(255,214,10,0.25);}
+.sb-inprogress{background:rgba(255,180,0,0.12);color:#ffb400;border:1px solid rgba(255,180,0,0.25);}
+/* Red statuses */
+.sb-issue     {background:rgba(255,71,87,0.12);color:#ff4757;border:1px solid rgba(255,71,87,0.25);}
+.sb-missed    {background:rgba(200,30,50,0.12);color:#ff2040;border:1px solid rgba(200,30,50,0.25);}
 
 .ship-actions{display:flex;gap:6px;padding-top:10px;border-top:1px solid var(--border);}
 .ship-actions button{
@@ -376,6 +383,85 @@ body::before{
   margin-bottom:16px;color:var(--accent);display:flex;align-items:center;gap:8px;
 }
 
+/* ── STATUS SELECT COLORS ── */
+.status-select{font-weight:700;letter-spacing:0.3px;}
+.status-select.green {color:#00ff88;border-color:rgba(0,255,136,0.4);}
+.status-select.yellow{color:#ffd60a;border-color:rgba(255,214,10,0.4);}
+.status-select.red   {color:#ff4757;border-color:rgba(255,71,87,0.4);}
+
+/* ── PHOTO UPLOAD ── */
+.photo-upload-area{
+  border:2px dashed var(--border);border-radius:10px;
+  padding:18px;text-align:center;cursor:pointer;
+  transition:all 0.2s;background:var(--surface);position:relative;
+}
+.photo-upload-area:hover,.photo-upload-area.drag{
+  border-color:var(--accent);background:rgba(0,212,255,0.04);
+}
+.photo-upload-area input[type=file]{
+  position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;
+}
+.photo-upload-ico{font-size:28px;margin-bottom:6px;}
+.photo-upload-txt{font-size:12px;color:var(--muted);letter-spacing:0.5px;}
+.photo-upload-txt strong{color:var(--accent);}
+
+.photo-preview{
+  position:relative;margin-top:10px;border-radius:10px;overflow:hidden;
+  border:1px solid var(--border);display:none;
+}
+.photo-preview img{width:100%;max-height:200px;object-fit:cover;display:block;}
+.photo-preview-remove{
+  position:absolute;top:8px;right:8px;
+  background:rgba(0,0,0,0.7);border:none;border-radius:50%;
+  width:28px;height:28px;color:#fff;font-size:14px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.photo-thumb{
+  width:48px;height:48px;border-radius:8px;object-fit:cover;
+  border:1px solid var(--border);cursor:pointer;
+  transition:transform 0.15s;vertical-align:middle;
+}
+.photo-thumb:hover{transform:scale(1.05);}
+
+/* ── PHOTO VIEWER OVERLAY ── */
+#photoViewer{
+  position:fixed;inset:0;background:rgba(0,0,0,0.95);
+  z-index:9999;display:none;align-items:center;justify-content:center;
+  flex-direction:column;gap:14px;padding:20px;
+}
+#photoViewer.open{display:flex;animation:fadeIn 0.2s ease;}
+#photoViewerImg{
+  max-width:100%;max-height:75dvh;border-radius:12px;
+  object-fit:contain;box-shadow:0 0 40px rgba(0,212,255,0.15);
+}
+#photoViewerFallback{
+  display:none;flex-direction:column;align-items:center;gap:12px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;padding:28px 24px;text-align:center;
+}
+#photoViewerFallback p{font-size:14px;color:var(--muted);line-height:1.6;}
+.pv-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.pv-btn{
+  padding:10px 20px;border-radius:10px;font-family:var(--font);
+  font-size:13px;font-weight:600;cursor:pointer;border:none;
+  letter-spacing:0.5px;text-decoration:none;display:inline-flex;
+  align-items:center;gap:6px;
+}
+.pv-btn-primary{background:linear-gradient(135deg,#0066cc,var(--accent));color:#fff;}
+.pv-btn-ghost{background:var(--card);color:var(--text);border:1px solid var(--border);}
+.pv-info{
+  font-size:11px;color:var(--muted);letter-spacing:1px;
+  text-transform:uppercase;text-align:center;
+}
+
+.upload-progress{
+  height:4px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden;display:none;
+}
+.upload-progress-bar{
+  height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#00ff88);
+  border-radius:2px;transition:width 0.3s ease;
+}
+
 ::-webkit-scrollbar{width:0;}
 </style>
 </head>
@@ -436,7 +522,7 @@ body::before{
   <button class="tab" onclick="showTab('shipments');loadShipments();" id="tab-shipments">
     <span class="ti">📦</span>Shipments
   </button>
-  <button class="tab admin-tab" onclick="showTab('create')" id="tab-create">
+  <button class="tab admin-tab" onclick="showTab('create');loadDropdowns();" id="tab-create">
     <span class="ti">✚</span>New
   </button>
   <button class="tab admin-tab" onclick="showTab('drivers');loadUsers();" id="tab-drivers">
@@ -450,9 +536,9 @@ body::before{
   <div class="screen active" id="screen-dashboard">
     <div class="stats-grid">
       <div class="stat-box"><div class="stat-n" id="dTotal">—</div><div class="stat-l">Total</div></div>
-      <div class="stat-box"><div class="stat-n yellow" id="dPending">—</div><div class="stat-l">Pending</div></div>
-      <div class="stat-box"><div class="stat-n" id="dTransit">—</div><div class="stat-l">In Transit</div></div>
-      <div class="stat-box"><div class="stat-n green" id="dDelivered">—</div><div class="stat-l">Delivered</div></div>
+      <div class="stat-box"><div class="stat-n yellow" id="dPending">—</div><div class="stat-l">Pending / Progress</div></div>
+      <div class="stat-box"><div class="stat-n red" id="dTransit">—</div><div class="stat-l">Issue / Missed</div></div>
+      <div class="stat-box"><div class="stat-n green" id="dDelivered">—</div><div class="stat-l">Serviced / Complete</div></div>
     </div>
     <div class="card">
       <div class="card-title">Recent Shipments</div>
@@ -477,16 +563,19 @@ body::before{
     <div class="card">
       <div class="card-title">New Shipment</div>
       <div class="row2">
-        <div class="field"><label>Entity *</label><input type="text" id="c-entity" placeholder="Entity name"/></div>
-        <div class="field"><label>Account Name *</label><input type="text" id="c-account" placeholder="Account"/></div>
+        <div class="field">
+          <label>Entity *</label>
+          <select id="c-entity"><option value="">— Loading… —</option></select>
+        </div>
+        <div class="field">
+          <label>Account Name *</label>
+          <select id="c-account"><option value="">— Loading… —</option></select>
+        </div>
       </div>
       <div class="row2">
-        <div class="field"><label>Service Type</label>
-          <select id="c-service">
-            <option value="">— Select —</option>
-            <option>Express</option><option>Standard</option>
-            <option>Freight</option><option>Same Day</option><option>Overnight</option>
-          </select>
+        <div class="field">
+          <label>Service Type</label>
+          <select id="c-service"><option value="">— Loading… —</option></select>
         </div>
         <div class="field"><label>Commodity</label><input type="text" id="c-commodity" placeholder="Type of goods"/></div>
       </div>
@@ -495,13 +584,20 @@ body::before{
         <div class="field"><label>Date</label><input type="date" id="c-date"/></div>
       </div>
       <div class="row2">
-        <div class="field"><label>Assign To (username)</label><input type="text" id="c-assigned" placeholder="driver username" autocapitalize="none"/></div>
-        <div class="field"><label>Status</label>
-          <select id="c-status">
-            <option value="Pending">Pending</option>
-            <option value="In Transit">In Transit</option>
-            <option value="Delivered">Delivered</option>
-            <option value="Cancelled">Cancelled</option>
+        <div class="field">
+          <label>Assign To</label>
+          <select id="c-assigned"><option value="">— Loading… —</option></select>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="c-status" class="status-select" onchange="applyStatusColor(this)">
+            <option value="">— Select Status —</option>
+            <option value="Serviced">✅ Serviced</option>
+            <option value="Complete">✅ Complete</option>
+            <option value="Pending">⏳ Pending</option>
+            <option value="In-Progress">⏳ In-Progress</option>
+            <option value="Issue">🔴 Issue</option>
+            <option value="Missed Service">🔴 Missed Service</option>
           </select>
         </div>
       </div>
@@ -544,16 +640,16 @@ body::before{
     <div class="modal-title">✏ Edit Shipment <span id="editShipId" style="font-size:11px;font-family:var(--mono);color:var(--muted)"></span></div>
     <input type="hidden" id="e-ID"/>
     <div class="row2">
-      <div class="field"><label>Entity</label><input type="text" id="e-Entity"/></div>
-      <div class="field"><label>Account Name</label><input type="text" id="e-AccountName"/></div>
+      <div class="field"><label>Entity</label>
+        <select id="e-Entity"><option value="">— Select —</option></select>
+      </div>
+      <div class="field"><label>Account Name</label>
+        <select id="e-AccountName"><option value="">— Select —</option></select>
+      </div>
     </div>
     <div class="row2">
       <div class="field"><label>Service Type</label>
-        <select id="e-ServiceType">
-          <option value="">— Select —</option>
-          <option>Express</option><option>Standard</option>
-          <option>Freight</option><option>Same Day</option><option>Overnight</option>
-        </select>
+        <select id="e-ServiceType"><option value="">— Select —</option></select>
       </div>
       <div class="field"><label>Commodity</label><input type="text" id="e-Commodity"/></div>
     </div>
@@ -562,13 +658,18 @@ body::before{
       <div class="field"><label>Date</label><input type="date" id="e-Date"/></div>
     </div>
     <div class="row2">
-      <div class="field"><label>Assigned To</label><input type="text" id="e-Assigned" autocapitalize="none"/></div>
+      <div class="field"><label>Assigned To</label>
+        <select id="e-Assigned"><option value="">— Select Driver —</option></select>
+      </div>
       <div class="field"><label>Status</label>
-        <select id="e-Status">
-          <option value="Pending">Pending</option>
-          <option value="In Transit">In Transit</option>
-          <option value="Delivered">Delivered</option>
-          <option value="Cancelled">Cancelled</option>
+        <select id="e-Status" class="status-select" onchange="applyStatusColor(this)">
+          <option value="">— Select Status —</option>
+          <option value="Serviced">✅ Serviced</option>
+          <option value="Complete">✅ Complete</option>
+          <option value="Pending">⏳ Pending</option>
+          <option value="In-Progress">⏳ In-Progress</option>
+          <option value="Issue">🔴 Issue</option>
+          <option value="Missed Service">🔴 Missed Service</option>
         </select>
       </div>
     </div>
@@ -585,21 +686,45 @@ body::before{
     <div class="modal-handle"></div>
     <div class="modal-title">🔄 Update Status</div>
     <input type="hidden" id="s-ID"/>
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
       <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Shipment</div>
       <div id="s-info" style="font-size:15px;font-weight:700"></div>
     </div>
     <div class="field"><label>New Status</label>
-      <select id="s-Status">
-        <option value="Pending">Pending</option>
-        <option value="In Transit">In Transit</option>
-        <option value="Delivered">Delivered</option>
-        <option value="Cancelled">Cancelled</option>
+      <select id="s-Status" class="status-select" onchange="applyStatusColor(this)">
+        <option value="">— Select Status —</option>
+        <option value="Serviced">✅ Serviced</option>
+        <option value="Complete">✅ Complete</option>
+        <option value="Pending">⏳ Pending</option>
+        <option value="In-Progress">⏳ In-Progress</option>
+        <option value="Issue">🔴 Issue</option>
+        <option value="Missed Service">🔴 Missed Service</option>
       </select>
     </div>
+
+    <!-- PHOTO UPLOAD -->
+    <div class="field" style="margin-top:12px">
+      <label>📷 Upload Photo <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+      <div class="photo-upload-area" id="photoDropZone"
+           ondragover="photoDrag(event,true)" ondragleave="photoDrag(event,false)" ondrop="photoDrop(event)">
+        <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="photoSelected(this)"/>
+        <div class="photo-upload-ico">📸</div>
+        <div class="photo-upload-txt">Tap to take photo or <strong>choose from gallery</strong></div>
+      </div>
+      <div class="photo-preview" id="photoPreview">
+        <img id="photoPreviewImg" src="" alt="preview"/>
+        <button class="photo-preview-remove" onclick="removePhoto()">✕</button>
+      </div>
+      <div class="upload-progress" id="uploadProgress">
+        <div class="upload-progress-bar" id="uploadProgressBar"></div>
+      </div>
+    </div>
+
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn btn-ghost" style="flex:1" onclick="closeOverlay('statusOverlay')">Cancel</button>
-      <button class="btn btn-primary" style="flex:2" onclick="saveStatus()">Update Status</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="closeStatusModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:2" id="saveStatusBtn" onclick="saveStatus()">
+        <span>Update Status</span>
+      </button>
     </div>
   </div>
 </div>
@@ -621,11 +746,34 @@ body::before{
   </div>
 </div>
 
+<!-- ── PHOTO VIEWER ── -->
+<div id="photoViewer">
+  <!-- Image view -->
+  <div id="photoViewerImgWrap" style="display:flex;flex-direction:column;align-items:center;gap:14px;width:100%">
+    <div class="pv-info" id="pvLoadingText">⏳ Loading photo…</div>
+    <img id="photoViewerImg" src="" alt="Photo"
+         onload="pvImgLoaded()" onerror="pvImgError()"/>
+    <div class="pv-actions" id="pvActions" style="display:none">
+      <a id="pvOpenLink" href="#" target="_blank" class="pv-btn pv-btn-primary">🔗 Open in Browser</a>
+      <button class="pv-btn pv-btn-ghost" onclick="closePhotoViewer()">✕ Close</button>
+    </div>
+  </div>
+  <!-- Fallback if image fails to load -->
+  <div id="photoViewerFallback">
+    <div style="font-size:48px">📷</div>
+    <p>Photo cannot be displayed directly.<br/>Click below to open it in your browser.</p>
+    <div class="pv-actions">
+      <a id="pvFallbackLink" href="#" target="_blank" class="pv-btn pv-btn-primary">🔗 Open Photo</a>
+      <button class="pv-btn pv-btn-ghost" onclick="closePhotoViewer()">✕ Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzvSgWWr9ymLnveAZMWIcnuJN4KBsp_RUQW93SIdOe1Vh1eNeE5pJdILNcSv1AshU2xzQ/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUqfQu_kupoKmZ1X-2fclJks63xQaXlaGRCAr3oTl8icWQDmIe-kxBfjvSrPpoFJxB/exec";
 
 // ── STATE ──────────────────────────────────────────────────────
 let session     = { username:"", token:"", role:"", driverName:"", email:"" };
@@ -695,9 +843,47 @@ function enterApp() {
   document.getElementById("uAv").textContent   = session.username.charAt(0).toUpperCase();
   document.getElementById("uName").textContent = session.driverName || session.username;
   document.getElementById("hSub").textContent  = session.role === "admin" ? "🔑 Admin Console" : "🚚 Driver Portal";
-  if (session.role === "admin") document.querySelectorAll(".admin-tab").forEach(t => t.classList.add("show"));
+  if (session.role === "admin") {
+    document.querySelectorAll(".admin-tab").forEach(t => t.classList.add("show"));
+    loadDropdowns(); // load entity, account, driver dropdowns
+  }
   showTab("dashboard");
   loadShipments();
+}
+
+// ── LOAD DROPDOWNS ─────────────────────────────────────────────
+async function loadDropdowns() {
+  try {
+    const res = await api(authPayload({ action:"getDropdowns" }));
+    if (!res.success) return;
+
+    // Entity dropdown (create + edit)
+    const entityOpts = `<option value="">— Select Entity —</option>` +
+      res.entities.map(e=>`<option value="${esc(e)}">${esc(e)}</option>`).join("");
+    document.getElementById("c-entity").innerHTML = entityOpts;
+    document.getElementById("e-Entity").innerHTML = entityOpts;
+
+    // AccountName dropdown (create + edit)
+    const accountOpts = `<option value="">— Select Account —</option>` +
+      res.accountNames.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join("");
+    document.getElementById("c-account").innerHTML = accountOpts;
+    document.getElementById("e-AccountName").innerHTML = accountOpts;
+
+    // Service Type dropdown (create + edit) — from Config Col C
+    const svcOpts = `<option value="">— Select Service Type —</option>` +
+      res.serviceTypes.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
+    document.getElementById("c-service").innerHTML = svcOpts;
+    document.getElementById("e-ServiceType").innerHTML = svcOpts;
+
+    // Driver dropdown — shows "Driver Name (@username)"
+    const driverOpts = `<option value="">— Select Driver —</option>` +
+      res.drivers.map(d=>
+        `<option value="${esc(d.value)}">${esc(d.label)} (@${esc(d.value)})</option>`
+      ).join("");
+    document.getElementById("c-assigned").innerHTML = driverOpts;
+    document.getElementById("e-Assigned").innerHTML = driverOpts;
+
+  } catch(e) { console.error("Dropdown load failed:", e); }
 }
 
 function doLogout() {
@@ -738,23 +924,36 @@ async function loadShipments() {
 // ── DASHBOARD ──────────────────────────────────────────────────
 function renderDashboard(ships) {
   document.getElementById("dTotal").textContent     = ships.length;
-  document.getElementById("dPending").textContent   = ships.filter(s=>s.Status==="Pending").length;
-  document.getElementById("dTransit").textContent   = ships.filter(s=>s.Status==="In Transit").length;
-  document.getElementById("dDelivered").textContent = ships.filter(s=>s.Status==="Delivered").length;
+  document.getElementById("dPending").textContent   = ships.filter(s=>s.Status==="Pending"||s.Status==="In-Progress").length;
+  document.getElementById("dTransit").textContent   = ships.filter(s=>s.Status==="Issue"||s.Status==="Missed Service").length;
+  document.getElementById("dDelivered").textContent = ships.filter(s=>s.Status==="Serviced"||s.Status==="Complete").length;
   const recent = [...ships].reverse().slice(0,5);
   const el = document.getElementById("recentList");
   if (!recent.length) { el.innerHTML=`<div class="empty"><div class="empty-ico">📦</div><p>No shipments yet</p></div>`; return; }
-  el.innerHTML = recent.map(s=>`
+  el.innerHTML = recent.map(s=>{
+    const rp = getPhotoUrl(s);
+    return `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)">
-      <div>
+      <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:700">${esc(s.Entity||"—")}</div>
         <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${esc(s.ID||"")} · ${esc(s.AccountName||"")}</div>
       </div>
-      <span class="status-badge ${sbClass(s.Status)}">${esc(s.Status||"—")}</span>
-    </div>`).join("");
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        ${rp && rp.startsWith("http") ?
+          `<span onclick="viewPhoto('${rp}')"
+                 style="font-size:18px;cursor:pointer;opacity:0.85" title="View photo">📷</span>` : ""}
+        <span class="status-badge ${sbClass(s.Status)}">${esc(s.Status||"—")}</span>
+      </div>
+    </div>`;
+  }).join("");
 }
 
 // ── SHIPMENTS LIST ─────────────────────────────────────────────
+function getPhotoUrl(s) {
+  // Check all possible field name variations from the sheet
+  return s.PhotoURL || s.photoURL || s.photoUrl || s.photo_url || s.Photo || s.photo || "";
+}
+
 function renderShipments(ships) {
   if (session.role !== "admin") {
     const entities = ["All", ...new Set(ships.map(s=>s.Entity).filter(Boolean))];
@@ -771,8 +970,49 @@ function renderShipments(ships) {
   document.getElementById("shipCount").textContent = filtered.length+" shipment"+(filtered.length!==1?"s":"");
   const el = document.getElementById("shipList");
   if (!filtered.length) { el.innerHTML=`<div class="empty"><div class="empty-ico">📦</div><p>No shipments found</p></div>`; return; }
+
   el.innerHTML = filtered.map(s=>{
-    const sc=statusClass(s.Status), sb=sbClass(s.Status);
+    const sc      = statusClass(s.Status);
+    const sb      = sbClass(s.Status);
+    const photoUrl = getPhotoUrl(s);
+    const hasPhoto = photoUrl && String(photoUrl).trim().startsWith("http");
+
+    // Photo preview block — shown for BOTH admin and user
+    const photoBlock = hasPhoto ? `
+      <div onclick="viewPhoto('${photoUrl}')"
+           style="margin:10px 0 6px;display:flex;align-items:center;gap:12px;
+                  background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.18);
+                  border-radius:10px;padding:10px 12px;cursor:pointer">
+        <div style="width:56px;height:56px;border-radius:9px;overflow:hidden;flex-shrink:0;
+                    background:var(--surface);border:1px solid var(--border);
+                    display:flex;align-items:center;justify-content:center">
+          <img src="${photoUrl}" alt="photo"
+               style="width:100%;height:100%;object-fit:cover;display:block"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+          <span style="display:none;font-size:22px;width:100%;height:100%;
+                       align-items:center;justify-content:center">📷</span>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--accent);
+                      letter-spacing:0.3px">📷 View Uploaded Photo</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">
+            Tap to open full screen
+          </div>
+        </div>
+        <div style="font-size:22px;color:var(--accent)">›</div>
+      </div>` : "";
+
+    // Action buttons — admin gets Photo + Edit + Delete, user gets Update Status
+    const adminActions = `
+      ${hasPhoto ? `<button class="sab-status"
+        style="background:rgba(0,212,255,0.12);color:var(--accent);border:1px solid rgba(0,212,255,0.2)"
+        onclick="event.stopPropagation();viewPhoto('${photoUrl}')">📷 Photo</button>` : ""}
+      <button class="sab-edit" onclick='openEdit(${JSON.stringify(s)})'>✏ Edit</button>
+      <button class="sab-del" onclick="delShipment('${esc(s.ID)}',this)">🗑 Delete</button>`;
+
+    const userActions = `
+      <button class="sab-status" onclick='openStatus(${JSON.stringify(s)})'>🔄 Update Status</button>`;
+
     return `
     <div class="ship-card ${sc}">
       <div class="ship-header">
@@ -790,11 +1030,9 @@ function renderShipments(ships) {
         ${s.Assigned   ?`<span class="chip muted">👤 ${esc(s.Assigned)}</span>`:""}
         ${s.Date       ?`<span class="chip muted">📅 ${esc(s.Date)}</span>`:""}
       </div>
+      ${photoBlock}
       <div class="ship-actions">
-        ${session.role==="admin"
-          ?`<button class="sab-edit" onclick='openEdit(${JSON.stringify(s)})'>✏ Edit</button>
-            <button class="sab-del" onclick="delShipment('${esc(s.ID)}',this)">🗑 Delete</button>`
-          :`<button class="sab-status" onclick='openStatus(${JSON.stringify(s)})'>🔄 Update Status</button>`}
+        ${session.role==="admin" ? adminActions : userActions}
       </div>
     </div>`;
   }).join("");
@@ -805,9 +1043,11 @@ function setEntity(name) { activeEntity=name; renderShipments(allShips); }
 
 // ── CREATE SHIPMENT ────────────────────────────────────────────
 async function createShipment() {
-  const entity  = document.getElementById("c-entity").value.trim();
-  const account = document.getElementById("c-account").value.trim();
+  const entity  = document.getElementById("c-entity").value;
+  const account = document.getElementById("c-account").value;
+  const status  = document.getElementById("c-status").value;
   if (!entity||!account) { toast("⚠ Entity and Account required","er"); return; }
+  if (!status)           { toast("⚠ Please select a Status","er"); return; }
   const btn = document.getElementById("createBtn");
   btn.innerHTML='<span class="spin"></span>'; btn.disabled=true;
   try {
@@ -818,16 +1058,22 @@ async function createShipment() {
       ServiceType: document.getElementById("c-service").value,
       Commodity:   document.getElementById("c-commodity").value.trim(),
       Boxes:       document.getElementById("c-boxes").value,
-      Assigned:    document.getElementById("c-assigned").value.trim(),
+      Assigned:    document.getElementById("c-assigned").value,
       Date:        document.getElementById("c-date").value,
       Status:      document.getElementById("c-status").value,
     }));
     if (res.success) {
       toast("✅ Shipment created: "+res.id,"ok");
-      ["c-entity","c-account","c-commodity","c-boxes","c-assigned"].forEach(id=>document.getElementById(id).value="");
-      document.getElementById("c-service").value="";
-      document.getElementById("c-status").value="Pending";
-      document.getElementById("c-date").value=new Date().toISOString().split("T")[0];
+      // reset fields
+      document.getElementById("c-entity").value   = "";
+      document.getElementById("c-account").value  = "";
+      document.getElementById("c-assigned").value = "";
+      document.getElementById("c-service").value  = "";
+      const cSt = document.getElementById("c-status");
+      cSt.value = ""; cSt.classList.remove("green","yellow","red");
+      document.getElementById("c-commodity").value = "";
+      document.getElementById("c-boxes").value    = "";
+      document.getElementById("c-date").value     = new Date().toISOString().split("T")[0];
       loadShipments(); showTab("shipments");
     } else throw new Error(res.message);
   } catch(e) { toast("❌ "+e.message,"er"); }
@@ -837,11 +1083,21 @@ async function createShipment() {
 // ── EDIT (admin) ───────────────────────────────────────────────
 function openEdit(s) {
   document.getElementById("editShipId").textContent = s.ID;
-  ["ID","Entity","AccountName","ServiceType","Commodity","Boxes","Assigned","Status"].forEach(f=>{
+  // Simple fields
+  ["ID","ServiceType","Commodity","Boxes","Status"].forEach(f=>{
     const el=document.getElementById("e-"+f); if(el) el.value=s[f]||"";
   });
+  // Dropdown fields
+  ["Entity","AccountName","Assigned"].forEach(f=>{
+    const el=document.getElementById("e-"+f);
+    if(el) el.value=s[f]||"";
+  });
+  // Date field
   const dateEl=document.getElementById("e-Date");
   if(dateEl){ try{ dateEl.value=s.Date?new Date(s.Date).toISOString().split("T")[0]:""; }catch(e){ dateEl.value=""; } }
+  // Apply status color
+  const eSt=document.getElementById("e-Status");
+  if(eSt){ eSt.value=s.Status||""; applyStatusColor(eSt); }
   document.getElementById("editOverlay").classList.add("open");
 }
 
@@ -868,21 +1124,178 @@ async function delShipment(id, btn) {
 }
 
 // ── STATUS UPDATE (driver) ─────────────────────────────────────
+let selectedPhotoBase64 = null;
+let selectedPhotoMime   = null;
+
 function openStatus(s) {
-  document.getElementById("s-ID").value=s.ID;
-  document.getElementById("s-info").textContent=`${s.Entity} — ${s.AccountName}`;
-  document.getElementById("s-Status").value=s.Status||"Pending";
+  document.getElementById("s-ID").value = s.ID;
+  document.getElementById("s-info").textContent = `${s.Entity} — ${s.AccountName}`;
+  const sSt = document.getElementById("s-Status");
+  sSt.value = s.Status || "";
+  applyStatusColor(sSt);
+  // Reset photo state
+  removePhoto();
   document.getElementById("statusOverlay").classList.add("open");
 }
 
+function closeStatusModal() {
+  closeOverlay("statusOverlay");
+  removePhoto();
+}
+
+// Photo selected from file input
+function photoSelected(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  if (file.size > 5 * 1024 * 1024) { toast("⚠ Photo must be under 5MB","er"); return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    selectedPhotoBase64 = dataUrl.split(",")[1];
+    selectedPhotoMime   = file.type || "image/jpeg";
+    // Show preview
+    document.getElementById("photoPreviewImg").src = dataUrl;
+    document.getElementById("photoPreview").style.display = "block";
+    document.querySelector(".photo-upload-area .photo-upload-ico").textContent = "✅";
+    document.querySelector(".photo-upload-area .photo-upload-txt").innerHTML = `<strong>${esc(file.name)}</strong>`;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Drag & drop support
+function photoDrag(e, over) {
+  e.preventDefault();
+  document.getElementById("photoDropZone").classList.toggle("drag", over);
+}
+function photoDrop(e) {
+  e.preventDefault();
+  document.getElementById("photoDropZone").classList.remove("drag");
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith("image/")) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    const inp = document.getElementById("photoInput");
+    inp.files = dt.files;
+    photoSelected(inp);
+  }
+}
+
+function removePhoto() {
+  selectedPhotoBase64 = null;
+  selectedPhotoMime   = null;
+  document.getElementById("photoInput").value = "";
+  document.getElementById("photoPreview").style.display = "none";
+  document.getElementById("photoPreviewImg").src = "";
+  document.querySelector(".photo-upload-area .photo-upload-ico").textContent = "📸";
+  document.querySelector(".photo-upload-area .photo-upload-txt").innerHTML =
+    `Tap to take photo or <strong>choose from gallery</strong>`;
+  document.getElementById("uploadProgress").style.display = "none";
+  document.getElementById("uploadProgressBar").style.width = "0%";
+}
+
 async function saveStatus() {
-  const id=document.getElementById("s-ID").value;
-  const status=document.getElementById("s-Status").value;
-  try {
-    const res = await api(authPayload({ action:"updateShipment", ID:id, Status:status }));
-    if(res.success){ toast("✅ Status updated: "+status,"ok"); closeOverlay("statusOverlay"); loadShipments(); }
-    else throw new Error(res.message);
-  } catch(e){ toast("❌ "+e.message,"er"); }
+  const id     = document.getElementById("s-ID").value;
+  const status = document.getElementById("s-Status").value;
+  if (!status) { toast("⚠ Please select a status","er"); return; }
+
+  const btn = document.getElementById("saveStatusBtn");
+  btn.innerHTML = '<span class="spin"></span>'; btn.disabled = true;
+
+  // Show progress bar if photo selected
+  if (selectedPhotoBase64) {
+    document.getElementById("uploadProgress").style.display = "block";
+    // Animate progress bar during upload
+    let pct = 0;
+    const pBar = document.getElementById("uploadProgressBar");
+    const pInt = setInterval(() => {
+      pct = Math.min(pct + 8, 85);
+      pBar.style.width = pct + "%";
+    }, 200);
+
+    try {
+      const res = await api(authPayload({
+        action:      "updateShipment",
+        ID:          id,
+        Status:      status,
+        photoBase64: selectedPhotoBase64,
+        photoMime:   selectedPhotoMime,
+        photoName:   `${id}_${session.username}_${Date.now()}.jpg`
+      }));
+      clearInterval(pInt);
+      pBar.style.width = "100%";
+      setTimeout(() => {
+        document.getElementById("uploadProgress").style.display = "none";
+      }, 500);
+      if (res.success) {
+        toast("✅ Status updated" + (res.photoUrl ? " + Photo saved 📷" : ""), "ok");
+        closeStatusModal();
+        loadShipments();
+      } else throw new Error(res.message);
+    } catch(e) {
+      clearInterval(pInt);
+      toast("❌ " + e.message, "er");
+    }
+  } else {
+    // No photo — plain status update
+    try {
+      const res = await api(authPayload({ action:"updateShipment", ID:id, Status:status }));
+      if (res.success) { toast("✅ Status updated: "+status,"ok"); closeStatusModal(); loadShipments(); }
+      else throw new Error(res.message);
+    } catch(e) { toast("❌ "+e.message,"er"); }
+  }
+
+  btn.innerHTML = "<span>Update Status</span>"; btn.disabled = false;
+}
+
+// ── PHOTO VIEWER ──────────────────────────────────────────────
+function viewPhoto(url) {
+  const viewer    = document.getElementById("photoViewer");
+  const imgEl     = document.getElementById("photoViewerImg");
+  const imgWrap   = document.getElementById("photoViewerImgWrap");
+  const fallback  = document.getElementById("photoViewerFallback");
+  const pvActions = document.getElementById("pvActions");
+  const pvLoading = document.getElementById("pvLoadingText");
+  const pvLink    = document.getElementById("pvOpenLink");
+  const fbLink    = document.getElementById("pvFallbackLink");
+
+  // Reset state
+  imgEl.style.display = "block";
+  imgWrap.style.display = "flex";
+  fallback.style.display = "none";
+  pvActions.style.display = "none";
+  pvLoading.style.display = "block";
+  imgEl.src = "";
+
+  // Set links
+  pvLink.href = url;
+  fbLink.href = url;
+
+  // Load image
+  imgEl.src = url;
+
+  viewer.classList.add("open");
+
+  // Close on backdrop tap (but not on image/buttons)
+  viewer.onclick = function(e) {
+    if (e.target === viewer) closePhotoViewer();
+  };
+}
+
+function pvImgLoaded() {
+  document.getElementById("pvLoadingText").style.display = "none";
+  document.getElementById("pvActions").style.display = "flex";
+}
+
+function pvImgError() {
+  // Image failed (Drive CORS block) — show fallback with open link
+  document.getElementById("photoViewerImg").style.display = "none";
+  document.getElementById("photoViewerImgWrap").style.display = "none";
+  document.getElementById("photoViewerFallback").style.display = "flex";
+}
+
+function closePhotoViewer() {
+  document.getElementById("photoViewer").classList.remove("open");
+  document.getElementById("photoViewerImg").src = "";
 }
 
 // ── DRIVERS (admin) ────────────────────────────────────────────
@@ -974,13 +1387,39 @@ async function api(payload){
 }
 
 function statusClass(s){
-  const m={"Pending":"status-pending","In Transit":"status-transit","Delivered":"status-delivered","Cancelled":"status-cancelled"};
-  return m[s]||"";
+  const m={
+    "Serviced":      "status-serviced",
+    "Complete":      "status-complete",
+    "Pending":       "status-pending",
+    "In-Progress":   "status-inprogress",
+    "Issue":         "status-issue",
+    "Missed Service":"status-missed"
+  };
+  return m[s]||"status-pending";
 }
 function sbClass(s){
-  const m={"Pending":"sb-pending","In Transit":"sb-transit","Delivered":"sb-delivered","Cancelled":"sb-cancelled"};
-  return m[s]||"";
+  const m={
+    "Serviced":      "sb-serviced",
+    "Complete":      "sb-complete",
+    "Pending":       "sb-pending",
+    "In-Progress":   "sb-inprogress",
+    "Issue":         "sb-issue",
+    "Missed Service":"sb-missed"
+  };
+  return m[s]||"sb-pending";
 }
+
+// Colors the select element itself based on chosen status
+function applyStatusColor(sel){
+  const green  = ["Serviced","Complete"];
+  const yellow = ["Pending","In-Progress"];
+  const red    = ["Issue","Missed Service"];
+  sel.classList.remove("green","yellow","red");
+  if(green.includes(sel.value))  sel.classList.add("green");
+  else if(yellow.includes(sel.value)) sel.classList.add("yellow");
+  else if(red.includes(sel.value))    sel.classList.add("red");
+}
+
 function esc(str){
   return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
