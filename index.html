@@ -1,4 +1,4 @@
-/<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -235,6 +235,19 @@ body::before{
   transition:all 0.2s;letter-spacing:0.5px;white-space:nowrap;
 }
 .etab.active{background:rgba(0,212,255,0.12);border-color:var(--accent);color:var(--accent);}
+
+/* Admin desktop: entity filter row wraps and shows all pills */
+body.admin-mode .entity-tabs {
+  flex-wrap: wrap;
+  overflow-x: visible;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 0;
+}
+body.admin-mode .etab {
+  font-size: 13px;
+  padding: 7px 18px;
+}
 
 /* ── SHIPMENT CARDS ── */
 .ship-card{
@@ -1319,23 +1332,25 @@ let tableSortCol = "";
 let tableSortDir = 1; // 1=asc, -1=desc
 
 function renderShipments(ships) {
+  // ── Entity filter tabs — shown for BOTH roles ──────────────────
+  const entities = ["All", ...new Set(ships.map(s=>s.Entity).filter(Boolean))];
+  const tabsEl   = document.getElementById("entityTabs");
+  tabsEl.style.display = "flex";
+  tabsEl.innerHTML = entities.map(e=>
+    `<div class="etab${e===activeEntity?" active":""}" onclick="setEntity('${esc(e)}')">${esc(e)}</div>`
+  ).join("");
+
+  // Apply entity + search filter (shared by both roles)
+  let filtered = ships;
+  if (activeEntity !== "All") filtered = ships.filter(s=>s.Entity===activeEntity);
+  const q = document.getElementById("searchQ").value.toLowerCase();
+  if (q) filtered = filtered.filter(s=>Object.values(s).some(v=>String(v).toLowerCase().includes(q)));
+  document.getElementById("shipCount").textContent = filtered.length+" shipment"+(filtered.length!==1?"s":"");
+  const el = document.getElementById("shipList");
+  if (!filtered.length) { el.innerHTML=`<div class="empty"><div class="empty-ico">📦</div><p>No shipments found</p></div>`; return; }
+
   if (session.role !== "admin") {
     // ── DRIVER: card view ──────────────────────────────────────
-    const entities = ["All", ...new Set(ships.map(s=>s.Entity).filter(Boolean))];
-    const tabsEl   = document.getElementById("entityTabs");
-    tabsEl.style.display = "flex";
-    tabsEl.innerHTML = entities.map(e=>
-      `<div class="etab${e===activeEntity?" active":""}" onclick="setEntity('${esc(e)}')">${esc(e)}</div>`
-    ).join("");
-
-    let filtered = ships;
-    if (activeEntity !== "All") filtered = ships.filter(s=>s.Entity===activeEntity);
-    const q = document.getElementById("searchQ").value.toLowerCase();
-    if (q) filtered = filtered.filter(s=>Object.values(s).some(v=>String(v).toLowerCase().includes(q)));
-    document.getElementById("shipCount").textContent = filtered.length+" shipment"+(filtered.length!==1?"s":"");
-    const el = document.getElementById("shipList");
-    if (!filtered.length) { el.innerHTML=`<div class="empty"><div class="empty-ico">📦</div><p>No shipments found</p></div>`; return; }
-
     el.innerHTML = filtered.map(s=>{
       const sc = statusClass(s.Status);
       const sb = sbClass(s.Status);
@@ -1388,22 +1403,15 @@ function renderShipments(ships) {
   }
 
   // ── ADMIN: table view ────────────────────────────────────────
-  let filtered = [...ships];
-  const q = document.getElementById("searchQ").value.toLowerCase();
-  if (q) filtered = filtered.filter(s=>Object.values(s).some(v=>String(v).toLowerCase().includes(q)));
-
   // Sort
   if (tableSortCol) {
-    filtered.sort((a,b)=>{
+    filtered = [...filtered].sort((a,b)=>{
       const av = String(a[tableSortCol]||"").toLowerCase();
       const bv = String(b[tableSortCol]||"").toLowerCase();
       return av < bv ? -tableSortDir : av > bv ? tableSortDir : 0;
     });
+    document.getElementById("shipCount").textContent = filtered.length+" shipment"+(filtered.length!==1?"s":"");
   }
-
-  document.getElementById("shipCount").textContent = filtered.length+" shipment"+(filtered.length!==1?"s":"");
-  const el = document.getElementById("shipList");
-  if (!filtered.length) { el.innerHTML=`<div class="empty"><div class="empty-ico">📦</div><p>No shipments found</p></div>`; return; }
 
   const cols = [
     { key:"ID",          label:"ID" },
