@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+/<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -463,6 +463,297 @@ body::before{
 }
 
 ::-webkit-scrollbar{width:0;}
+
+/* ══ ADMIN DESKTOP LAYOUT ══════════════════════════════════════ */
+body.admin-mode {
+  overflow: auto;
+}
+body.admin-mode #app {
+  max-width: 100%;
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+  box-shadow: none;
+}
+body.admin-mode .screens {
+  overflow: visible;
+  height: auto;
+}
+body.admin-mode .screen {
+  position: relative;
+  inset: auto;
+  overflow: visible;
+  padding: 20px 28px 40px;
+  display: none;
+}
+body.admin-mode .screen.active {
+  display: block;
+}
+
+/* Desktop header */
+body.admin-mode .status-bar {
+  display: none;
+}
+body.admin-mode .header {
+  padding: 14px 32px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+body.admin-mode .brand-name { font-size: 22px; }
+body.admin-mode .brand-icon { width: 40px; height: 40px; font-size: 20px; }
+
+/* Desktop tab bar — horizontal pill style */
+body.admin-mode .tab-bar {
+  padding: 10px 32px;
+  gap: 6px;
+  justify-content: flex-start;
+  position: sticky;
+  top: 61px;
+  z-index: 99;
+  background: var(--surface);
+}
+body.admin-mode .tab {
+  flex: none;
+  flex-direction: row;
+  padding: 9px 20px;
+  font-size: 13px;
+  gap: 6px;
+  border-radius: 10px;
+  letter-spacing: 1px;
+}
+body.admin-mode .tab .ti { font-size: 15px; }
+
+/* Desktop main content grid */
+body.admin-mode #screen-dashboard {
+  display: none;
+}
+body.admin-mode #screen-dashboard.active {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+body.admin-mode .stats-grid {
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: 0;
+}
+body.admin-mode #screen-dashboard .card {
+  grid-column: 1 / -1;
+}
+
+/* Desktop shipments — full width, no cap */
+body.admin-mode #screen-shipments {
+  max-width: 100%;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+body.admin-mode .ship-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto auto;
+  gap: 0 20px;
+  padding: 16px 20px;
+}
+body.admin-mode .ship-header {
+  grid-column: 1;
+  grid-row: 1;
+}
+body.admin-mode .ship-meta {
+  grid-column: 1;
+  grid-row: 2;
+}
+body.admin-mode .ship-actions {
+  grid-column: 2;
+  grid-row: 1 / 4;
+  flex-direction: column;
+  justify-content: center;
+  border-top: none;
+  border-left: 1px solid var(--border);
+  padding-top: 0;
+  padding-left: 20px;
+  min-width: 140px;
+}
+body.admin-mode .ship-actions button { width: 100%; }
+
+/* Desktop create form */
+body.admin-mode #screen-create {
+  max-width: 860px;
+  margin: 0 auto;
+}
+body.admin-mode #screen-create .row2 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* Desktop drivers */
+body.admin-mode #screen-drivers {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: none;
+}
+body.admin-mode #screen-drivers.active {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* Desktop overlay — center instead of bottom sheet */
+body.admin-mode .overlay {
+  align-items: center;
+  justify-content: center;
+}
+body.admin-mode .overlay .sheet {
+  border-radius: 16px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+body.admin-mode .overlay .sheet::before { display: none; }
+
+/* Toast position fix for desktop */
+body.admin-mode #toast {
+  bottom: 30px;
+}
+
+/* ══ ADMIN SHIPMENT TABLE ══════════════════════════════════════ */
+.admin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+.admin-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+/* Column widths — fixed so nothing collapses */
+.admin-table col.col-id       { width: 90px; }
+.admin-table col.col-entity   { width: 130px; }
+.admin-table col.col-account  { width: 150px; }
+.admin-table col.col-service  { width: 130px; }
+.admin-table col.col-commodity{ width: 120px; }
+.admin-table col.col-boxes    { width: 70px; }
+.admin-table col.col-date     { width: 110px; }
+.admin-table col.col-assigned { width: 120px; }
+.admin-table col.col-status   { width: 130px; }
+.admin-table col.col-photo    { width: 72px; }
+.admin-table col.col-actions  { width: 150px; }
+.admin-table thead tr {
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+}
+.admin-table thead th {
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+.admin-table thead th:hover { color: var(--text); }
+.admin-table thead th .sort-ico {
+  margin-left: 4px;
+  opacity: 0.4;
+  font-style: normal;
+  font-size: 10px;
+}
+.admin-table thead th.sort-asc .sort-ico,
+.admin-table thead th.sort-desc .sort-ico { opacity: 1; color: var(--accent); }
+
+.admin-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.admin-table tbody tr:last-child { border-bottom: none; }
+.admin-table tbody tr:hover { background: rgba(0,212,255,0.04); }
+
+.admin-table td {
+  padding: 11px 14px;
+  vertical-align: middle;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-table td.td-id {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+}
+.admin-table td.td-entity { font-weight: 700; }
+.admin-table td.td-account { color: var(--muted); font-size: 12px; }
+.admin-table td.td-num {
+  font-family: var(--mono);
+  text-align: center;
+  color: var(--muted);
+}
+.admin-table td.td-date {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+.admin-table td.td-assigned { font-size: 12px; }
+.admin-table td.td-photo { text-align: center; overflow: visible; }
+.admin-table td.td-status { overflow: visible; }
+.admin-table td.td-actions {
+  overflow: visible;
+  padding: 8px 12px;
+}
+
+/* left colour bar via box-shadow on the row */
+.admin-table tbody tr.status-serviced   td:first-child { box-shadow: inset 3px 0 0 #00ff88; }
+.admin-table tbody tr.status-complete   td:first-child { box-shadow: inset 3px 0 0 #00dc64; }
+.admin-table tbody tr.status-pending    td:first-child { box-shadow: inset 3px 0 0 var(--yellow); }
+.admin-table tbody tr.status-inprogress td:first-child { box-shadow: inset 3px 0 0 #ffb400; }
+.admin-table tbody tr.status-issue      td:first-child { box-shadow: inset 3px 0 0 var(--red); }
+.admin-table tbody tr.status-missed     td:first-child { box-shadow: inset 3px 0 0 #ff2040; }
+
+.tbl-actions { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
+.tbl-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.tbl-btn:active { transform: scale(0.93); }
+.tbl-btn-edit { background: rgba(0,212,255,0.14); color: var(--accent); border: 1px solid rgba(0,212,255,0.25); }
+.tbl-btn-edit:hover { background: rgba(0,212,255,0.24); }
+.tbl-btn-del  { background: rgba(255,71,87,0.12); color: var(--red); border: 1px solid rgba(255,71,87,0.25); }
+.tbl-btn-del:hover { background: rgba(255,71,87,0.22); }
+.tbl-btn-photo { background: rgba(0,212,255,0.08); color: var(--accent); border: 1px solid rgba(0,212,255,0.2); }
+
+.table-photo-thumb {
+  width: 36px; height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: block;
+  margin: 0 auto;
+  transition: transform 0.15s;
+}
+.table-photo-thumb:hover { transform: scale(1.1); }
 </style>
 </head>
 <body>
@@ -471,7 +762,7 @@ body::before{
 <!-- ══ LOGIN ══════════════════════════════════════════ -->
 <div id="loginScreen">
   <div class="login-glow">🚚</div>
-  <div class="login-title">Tracker</div>
+  <div class="login-title">LogiTrack</div>
   <div class="login-sub">Logistics Management</div>
   <div class="login-card">
     <div class="lfield">
@@ -838,6 +1129,59 @@ document.addEventListener("keydown", e => {
   if (e.key === "Enter" && !document.getElementById("loginScreen").classList.contains("hidden")) doLogin();
 });
 
+// ── AUTO-REFRESH (admin only) ──────────────────────────────────
+let autoRefreshInterval = null;
+let lastShipHash = "";
+let lastUserHash = "";
+
+async function autoRefreshTick() {
+  if (!session.username || session.role !== "admin") return;
+  try {
+    // Always refresh shipments silently
+    const sRes = await api(authPayload({ action:"getShipments" }));
+    if (sRes.success) {
+      const newHash = JSON.stringify(sRes.data);
+      if (newHash !== lastShipHash) {
+        lastShipHash = newHash;
+        allShips = sRes.data;
+        renderDashboard(allShips);
+        // Only re-render shipments list if that tab is active (avoid scroll jump)
+        const shipScreen = document.getElementById("screen-shipments");
+        if (shipScreen && shipScreen.classList.contains("active")) {
+          renderShipments(allShips);
+        }
+        // Subtle indicator
+        const cs = document.getElementById("connStatus");
+        if (cs) { cs.textContent = "● UPDATED"; setTimeout(()=>{ cs.textContent="● LIVE"; }, 2000); }
+      }
+    }
+
+    // Refresh users list if drivers tab is active
+    const driverScreen = document.getElementById("screen-drivers");
+    if (driverScreen && driverScreen.classList.contains("active")) {
+      const uRes = await api(authPayload({ action:"listUsers" }));
+      if (uRes.success) {
+        const newUHash = JSON.stringify(uRes.data);
+        if (newUHash !== lastUserHash) {
+          lastUserHash = newUHash;
+          renderDrivers(uRes.data);
+        }
+      }
+    }
+  } catch(e) { /* silent fail — network blip */ }
+}
+
+function startAutoRefresh() {
+  stopAutoRefresh();
+  lastShipHash = "";
+  lastUserHash = "";
+  autoRefreshInterval = setInterval(autoRefreshTick, 30000);
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
+}
+
 function enterApp() {
   document.getElementById("loginScreen").classList.add("hidden");
   document.getElementById("uAv").textContent   = session.username.charAt(0).toUpperCase();
@@ -845,7 +1189,17 @@ function enterApp() {
   document.getElementById("hSub").textContent  = session.role === "admin" ? "🔑 Admin Console" : "🚚 Driver Portal";
   if (session.role === "admin") {
     document.querySelectorAll(".admin-tab").forEach(t => t.classList.add("show"));
-    loadDropdowns(); // load entity, account, driver dropdowns
+    loadDropdowns();
+    // Switch to desktop layout for admin
+    document.body.classList.add("admin-mode");
+    const vp = document.querySelector('meta[name="viewport"]');
+    if (vp) vp.setAttribute("content", "width=device-width,initial-scale=1.0");
+    startAutoRefresh();
+  } else {
+    // Ensure mobile layout for drivers
+    document.body.classList.remove("admin-mode");
+    const vp = document.querySelector('meta[name="viewport"]');
+    if (vp) vp.setAttribute("content", "width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no");
   }
   showTab("dashboard");
   loadShipments();
@@ -887,11 +1241,16 @@ async function loadDropdowns() {
 }
 
 function doLogout() {
+  stopAutoRefresh();
   session = { username:"", token:"", role:"", driverName:"", email:"" };
   localStorage.removeItem("lt_session");
   allShips = [];
   closeOverlay("userOverlay");
   document.querySelectorAll(".admin-tab").forEach(t => t.classList.remove("show"));
+  // Remove desktop mode on logout
+  document.body.classList.remove("admin-mode");
+  const vp = document.querySelector('meta[name="viewport"]');
+  if (vp) vp.setAttribute("content", "width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no");
   document.getElementById("lu").value = "";
   document.getElementById("lp").value = "";
   document.getElementById("loginErr").classList.remove("show");
@@ -915,6 +1274,7 @@ async function loadShipments() {
     const res = await api(authPayload({ action:"getShipments" }));
     if (res.success) {
       allShips = res.data;
+      lastShipHash = JSON.stringify(res.data);
       renderDashboard(allShips);
       renderShipments(allShips);
     } else if (res.message && res.message.includes("Session")) doLogout();
@@ -954,92 +1314,181 @@ function getPhotoUrl(s) {
   return s.PhotoURL || s.photoURL || s.photoUrl || s.photo_url || s.Photo || s.photo || "";
 }
 
+// ── TABLE SORT STATE ───────────────────────────────────────────
+let tableSortCol = "";
+let tableSortDir = 1; // 1=asc, -1=desc
+
 function renderShipments(ships) {
   if (session.role !== "admin") {
+    // ── DRIVER: card view ──────────────────────────────────────
     const entities = ["All", ...new Set(ships.map(s=>s.Entity).filter(Boolean))];
     const tabsEl   = document.getElementById("entityTabs");
     tabsEl.style.display = "flex";
     tabsEl.innerHTML = entities.map(e=>
       `<div class="etab${e===activeEntity?" active":""}" onclick="setEntity('${esc(e)}')">${esc(e)}</div>`
     ).join("");
+
+    let filtered = ships;
+    if (activeEntity !== "All") filtered = ships.filter(s=>s.Entity===activeEntity);
+    const q = document.getElementById("searchQ").value.toLowerCase();
+    if (q) filtered = filtered.filter(s=>Object.values(s).some(v=>String(v).toLowerCase().includes(q)));
+    document.getElementById("shipCount").textContent = filtered.length+" shipment"+(filtered.length!==1?"s":"");
+    const el = document.getElementById("shipList");
+    if (!filtered.length) { el.innerHTML=`<div class="empty"><div class="empty-ico">📦</div><p>No shipments found</p></div>`; return; }
+
+    el.innerHTML = filtered.map(s=>{
+      const sc = statusClass(s.Status);
+      const sb = sbClass(s.Status);
+      const photoUrl = getPhotoUrl(s);
+      const hasPhoto = photoUrl && String(photoUrl).trim().startsWith("http");
+      const photoBlock = hasPhoto ? `
+        <div onclick="viewPhoto('${photoUrl}')"
+             style="margin:10px 0 6px;display:flex;align-items:center;gap:12px;
+                    background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.18);
+                    border-radius:10px;padding:10px 12px;cursor:pointer">
+          <div style="width:56px;height:56px;border-radius:9px;overflow:hidden;flex-shrink:0;
+                      background:var(--surface);border:1px solid var(--border);
+                      display:flex;align-items:center;justify-content:center">
+            <img src="${photoUrl}" alt="photo"
+                 style="width:100%;height:100%;object-fit:cover;display:block"
+                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+            <span style="display:none;font-size:22px;width:100%;height:100%;
+                         align-items:center;justify-content:center">📷</span>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--accent);letter-spacing:0.3px">📷 View Uploaded Photo</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">Tap to open full screen</div>
+          </div>
+          <div style="font-size:22px;color:var(--accent)">›</div>
+        </div>` : "";
+      return `
+      <div class="ship-card ${sc}">
+        <div class="ship-header">
+          <div>
+            <div class="ship-id">${esc(s.ID||"—")}</div>
+            <div class="ship-entity">${esc(s.Entity||"—")}</div>
+            <div class="ship-account">${esc(s.AccountName||"—")}</div>
+          </div>
+          <span class="status-badge ${sb}">${esc(s.Status||"—")}</span>
+        </div>
+        <div class="ship-meta">
+          ${s.ServiceType?`<span class="chip">📋 ${esc(s.ServiceType)}</span>`:""}
+          ${s.Commodity  ?`<span class="chip orange">📦 ${esc(s.Commodity)}</span>`:""}
+          ${s.Boxes      ?`<span class="chip muted">🗃 ${esc(s.Boxes)} boxes</span>`:""}
+          ${s.Assigned   ?`<span class="chip muted">👤 ${esc(s.Assigned)}</span>`:""}
+          ${s.Date       ?`<span class="chip muted">📅 ${esc(s.Date)}</span>`:""}
+        </div>
+        ${photoBlock}
+        <div class="ship-actions">
+          <button class="sab-status" onclick='openStatus(${JSON.stringify(s)})'>🔄 Update Status</button>
+        </div>
+      </div>`;
+    }).join("");
+    return;
   }
-  let filtered = ships;
-  if (activeEntity !== "All") filtered = ships.filter(s=>s.Entity===activeEntity);
+
+  // ── ADMIN: table view ────────────────────────────────────────
+  let filtered = [...ships];
   const q = document.getElementById("searchQ").value.toLowerCase();
   if (q) filtered = filtered.filter(s=>Object.values(s).some(v=>String(v).toLowerCase().includes(q)));
+
+  // Sort
+  if (tableSortCol) {
+    filtered.sort((a,b)=>{
+      const av = String(a[tableSortCol]||"").toLowerCase();
+      const bv = String(b[tableSortCol]||"").toLowerCase();
+      return av < bv ? -tableSortDir : av > bv ? tableSortDir : 0;
+    });
+  }
+
   document.getElementById("shipCount").textContent = filtered.length+" shipment"+(filtered.length!==1?"s":"");
   const el = document.getElementById("shipList");
   if (!filtered.length) { el.innerHTML=`<div class="empty"><div class="empty-ico">📦</div><p>No shipments found</p></div>`; return; }
 
-  el.innerHTML = filtered.map(s=>{
-    const sc      = statusClass(s.Status);
-    const sb      = sbClass(s.Status);
+  const cols = [
+    { key:"ID",          label:"ID" },
+    { key:"Entity",      label:"Entity" },
+    { key:"AccountName", label:"Account" },
+    { key:"ServiceType", label:"Service Type" },
+    { key:"Commodity",   label:"Commodity" },
+    { key:"Boxes",       label:"Boxes" },
+    { key:"Date",        label:"Date" },
+    { key:"Assigned",    label:"Assigned" },
+    { key:"Status",      label:"Status" },
+    { key:"_photo",      label:"Photo",   noSort:true },
+    { key:"_actions",    label:"Actions", noSort:true },
+  ];
+
+  const thHtml = cols.map(c => {
+    if (c.noSort) return `<th style="text-align:center">${c.label}</th>`;
+    const active = tableSortCol === c.key;
+    const ico = active ? (tableSortDir===1?"▲":"▼") : "⇅";
+    const cls = active ? (tableSortDir===1?"sort-asc":"sort-desc") : "";
+    return `<th class="${cls}" onclick="tableSort('${c.key}')">${c.label} <i class="sort-ico">${ico}</i></th>`;
+  }).join("");
+
+  const rowsHtml = filtered.map(s => {
+    const sc       = statusClass(s.Status);
+    const sb       = sbClass(s.Status);
     const photoUrl = getPhotoUrl(s);
     const hasPhoto = photoUrl && String(photoUrl).trim().startsWith("http");
-
-    // Photo preview block — shown for BOTH admin and user
-    const photoBlock = hasPhoto ? `
-      <div onclick="viewPhoto('${photoUrl}')"
-           style="margin:10px 0 6px;display:flex;align-items:center;gap:12px;
-                  background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.18);
-                  border-radius:10px;padding:10px 12px;cursor:pointer">
-        <div style="width:56px;height:56px;border-radius:9px;overflow:hidden;flex-shrink:0;
-                    background:var(--surface);border:1px solid var(--border);
-                    display:flex;align-items:center;justify-content:center">
-          <img src="${photoUrl}" alt="photo"
-               style="width:100%;height:100%;object-fit:cover;display:block"
-               onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
-          <span style="display:none;font-size:22px;width:100%;height:100%;
-                       align-items:center;justify-content:center">📷</span>
-        </div>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:var(--accent);
-                      letter-spacing:0.3px">📷 View Uploaded Photo</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:3px">
-            Tap to open full screen
-          </div>
-        </div>
-        <div style="font-size:22px;color:var(--accent)">›</div>
-      </div>` : "";
-
-    // Action buttons — admin gets Photo + Edit + Delete, user gets Update Status
-    const adminActions = `
-      ${hasPhoto ? `<button class="sab-status"
-        style="background:rgba(0,212,255,0.12);color:var(--accent);border:1px solid rgba(0,212,255,0.2)"
-        onclick="event.stopPropagation();viewPhoto('${photoUrl}')">📷 Photo</button>` : ""}
-      <button class="sab-edit" onclick='openEdit(${JSON.stringify(s)})'>✏ Edit</button>
-      <button class="sab-del" onclick="delShipment('${esc(s.ID)}',this)">🗑 Delete</button>`;
-
-    const userActions = `
-      <button class="sab-status" onclick='openStatus(${JSON.stringify(s)})'>🔄 Update Status</button>`;
+    const photoCell = hasPhoto
+      ? `<img src="${photoUrl}" alt="photo" class="table-photo-thumb"
+              onclick="viewPhoto('${photoUrl}')"
+              onerror="this.outerHTML='<span style=\\'font-size:18px;cursor:pointer\\' onclick=\\'viewPhoto(\\''+\\'${photoUrl}'+\\'\\')\\'>📷</span>'">`
+      : `<span style="color:var(--muted);font-size:18px">—</span>`;
 
     return `
-    <div class="ship-card ${sc}">
-      <div class="ship-header">
-        <div>
-          <div class="ship-id">${esc(s.ID||"—")}</div>
-          <div class="ship-entity">${esc(s.Entity||"—")}</div>
-          <div class="ship-account">${esc(s.AccountName||"—")}</div>
+    <tr class="${sc}">
+      <td class="td-id">${esc(s.ID||"—")}</td>
+      <td class="td-entity">${esc(s.Entity||"—")}</td>
+      <td class="td-account">${esc(s.AccountName||"—")}</td>
+      <td>${esc(s.ServiceType||"—")}</td>
+      <td>${esc(s.Commodity||"—")}</td>
+      <td class="td-num">${esc(s.Boxes||"—")}</td>
+      <td class="td-date">${esc(s.Date||"—")}</td>
+      <td class="td-assigned">${s.Assigned?`👤 ${esc(s.Assigned)}`:"—"}</td>
+      <td class="td-status"><span class="status-badge ${sb}">${esc(s.Status||"—")}</span></td>
+      <td class="td-photo">${photoCell}</td>
+      <td class="td-actions">
+        <div class="tbl-actions">
+          <button class="tbl-btn tbl-btn-edit" onclick='openEdit(${JSON.stringify(s)})'>✏ Edit</button>
+          <button class="tbl-btn tbl-btn-del"  onclick="delShipment('${esc(s.ID)}',this)">🗑</button>
         </div>
-        <span class="status-badge ${sb}">${esc(s.Status||"—")}</span>
-      </div>
-      <div class="ship-meta">
-        ${s.ServiceType?`<span class="chip">📋 ${esc(s.ServiceType)}</span>`:""}
-        ${s.Commodity  ?`<span class="chip orange">📦 ${esc(s.Commodity)}</span>`:""}
-        ${s.Boxes      ?`<span class="chip muted">🗃 ${esc(s.Boxes)} boxes</span>`:""}
-        ${s.Assigned   ?`<span class="chip muted">👤 ${esc(s.Assigned)}</span>`:""}
-        ${s.Date       ?`<span class="chip muted">📅 ${esc(s.Date)}</span>`:""}
-      </div>
-      ${photoBlock}
-      <div class="ship-actions">
-        ${session.role==="admin" ? adminActions : userActions}
-      </div>
-    </div>`;
+      </td>
+    </tr>`;
   }).join("");
+
+  el.innerHTML = `
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <colgroup>
+        <col class="col-id"/>
+        <col class="col-entity"/>
+        <col class="col-account"/>
+        <col class="col-service"/>
+        <col class="col-commodity"/>
+        <col class="col-boxes"/>
+        <col class="col-date"/>
+        <col class="col-assigned"/>
+        <col class="col-status"/>
+        <col class="col-photo"/>
+        <col class="col-actions"/>
+      </colgroup>
+      <thead><tr>${thHtml}</tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+  </div>`;
+}
+
+function tableSort(col) {
+  if (tableSortCol === col) tableSortDir *= -1;
+  else { tableSortCol = col; tableSortDir = 1; }
+  renderShipments(allShips);
 }
 
 function filterShipments() { renderShipments(allShips); }
-function setEntity(name) { activeEntity=name; renderShipments(allShips); }
+function setEntity(name) { activeEntity = name; renderShipments(allShips); }
 
 // ── CREATE SHIPMENT ────────────────────────────────────────────
 async function createShipment() {
@@ -1115,12 +1564,14 @@ async function saveEdit() {
 
 async function delShipment(id, btn) {
   if(!confirm("Delete shipment "+id+"?")) return;
-  const card=btn.closest(".ship-card"); card.style.opacity="0.4";
+  // Support both card view (.ship-card) and table row (tr)
+  const row = btn.closest(".ship-card") || btn.closest("tr");
+  if (row) row.style.opacity = "0.4";
   try {
     const res = await api(authPayload({ action:"deleteShipment", ID:id }));
-    if(res.success){ toast("🗑 Deleted","ok"); card.remove(); loadShipments(); }
+    if(res.success){ toast("🗑 Deleted","ok"); loadShipments(); }
     else throw new Error(res.message);
-  } catch(e){ card.style.opacity="1"; toast("❌ "+e.message,"er"); }
+  } catch(e){ if(row) row.style.opacity="1"; toast("❌ "+e.message,"er"); }
 }
 
 // ── STATUS UPDATE (driver) ─────────────────────────────────────
@@ -1302,7 +1753,10 @@ function closePhotoViewer() {
 async function loadUsers() {
   try {
     const res = await api(authPayload({ action:"listUsers" }));
-    if(res.success) renderDrivers(res.data);
+    if(res.success) {
+      lastUserHash = JSON.stringify(res.data);
+      renderDrivers(res.data);
+    }
   } catch(e){ toast("❌ Failed to load drivers","er"); }
 }
 
