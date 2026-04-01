@@ -681,6 +681,7 @@ body.admin-mode #toast {
 .admin-table col.col-assigned { width: 120px; }
 .admin-table col.col-status   { width: 130px; }
 .admin-table col.col-photo    { width: 72px; }
+.admin-table col.col-updated  { width: 150px; }
 .admin-table col.col-actions  { width: 150px; }
 .admin-table thead tr {
   background: var(--surface);
@@ -792,6 +793,22 @@ body.admin-mode #toast {
   transition: transform 0.15s;
 }
 .table-photo-thumb:hover { transform: scale(1.1); }
+
+/* ── DATE FILTER BAR ── */
+.date-filter-bar{display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+.dfbtn{
+  padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;
+  background:var(--card);border:1px solid var(--border);color:var(--muted);
+  cursor:pointer;transition:all 0.2s;letter-spacing:0.5px;font-family:var(--font);white-space:nowrap;
+}
+.dfbtn:active{transform:scale(0.95);}
+.dfbtn.active{background:rgba(0,212,255,0.12);border-color:var(--accent);color:var(--accent);}
+.df-date-input{
+  padding:6px 12px;border-radius:20px;font-size:12px;font-family:var(--font);
+  background:var(--card);border:1px solid var(--border);color:var(--text);
+  outline:none;cursor:pointer;
+}
+.df-date-input:focus,.df-date-input.active{border-color:var(--accent);color:var(--accent);}
 </style>
 </head>
 <body>
@@ -872,6 +889,13 @@ body.admin-mode #toast {
 
   <!-- ── DASHBOARD ── -->
   <div class="screen active" id="screen-dashboard">
+    <!-- Date filter bar -->
+    <div class="date-filter-bar" id="dash-filter-bar">
+      <button class="dfbtn" id="dash-btn-today" onclick="setDateFilter('today')">Today</button>
+      <button class="dfbtn active" id="dash-btn-all"   onclick="setDateFilter('all')">All</button>
+      <input  class="df-date-input" type="date" id="dash-date-pick"
+              onchange="setDateFilter(this.value)" title="Pick a specific date"/>
+    </div>
     <div class="stats-grid">
       <div class="stat-box"><div class="stat-n" id="dTotal">—</div><div class="stat-l">Total</div></div>
       <div class="stat-box"><div class="stat-n yellow" id="dPending">—</div><div class="stat-l">Pending / Progress</div></div>
@@ -886,6 +910,13 @@ body.admin-mode #toast {
 
   <!-- ── SHIPMENTS ── -->
   <div class="screen" id="screen-shipments">
+    <!-- Date filter bar -->
+    <div class="date-filter-bar" id="ship-filter-bar">
+      <button class="dfbtn" id="ship-btn-today" onclick="setDateFilter('today')">Today</button>
+      <button class="dfbtn active" id="ship-btn-all"   onclick="setDateFilter('all')">All</button>
+      <input  class="df-date-input" type="date" id="ship-date-pick"
+              onchange="setDateFilter(this.value)" title="Pick a specific date"/>
+    </div>
     <div class="search-wrap">
       <span class="search-ico">🔍</span>
       <input type="search" id="searchQ" placeholder="Search entity, account, status…" oninput="filterShipments()"/>
@@ -1250,12 +1281,13 @@ body.admin-mode #toast {
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3mafGUvnjjED86BCha2mwz0lBoocy9S9gDYWYqIz8mMf3pwyaLKK1fG7-g6sObRYxhQ/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZk92gEG1UvdbLZZ2Anb3UdeoxhjLqkkRI9kNC66w3BBYMDUAzsEp68SNNIaCsyQdO-w/exec";
 
 // ── STATE ──────────────────────────────────────────────────────
 let session      = { username:"", token:"", role:"", driverName:"", email:"" };
 let allShips     = [];
 let activeEntity = "All";
+let activeDateFilter = "all"; // "today" | "all" | "YYYY-MM-DD"
 
 // ── AUTH HELPER ────────────────────────────────────────────────
 function authPayload(extra) {
@@ -1420,6 +1452,8 @@ function enterApp() {
     startAutoRefresh(20000); // driver polls every 20s — sees status updates promptly
   }
   showTab("dashboard");
+  activeDateFilter = "all"; // show all records by default
+  syncDateFilterUI();
   loadShipments();
 }
 
@@ -1495,13 +1529,14 @@ async function loadShipments() {
 
 // ── DASHBOARD ──────────────────────────────────────────────────
 function renderDashboard(ships) {
-  document.getElementById("dTotal").textContent     = ships.length;
-  document.getElementById("dPending").textContent   = ships.filter(s=>s.Status==="Pending"||s.Status==="In-Progress").length;
-  document.getElementById("dTransit").textContent   = ships.filter(s=>s.Status==="Issue"||s.Status==="Missed Service").length;
-  document.getElementById("dDelivered").textContent = ships.filter(s=>s.Status==="Serviced"||s.Status==="Complete").length;
-  const recent = [...ships].reverse().slice(0,5);
+  const filtered = applyDateFilter(ships);
+  document.getElementById("dTotal").textContent     = filtered.length;
+  document.getElementById("dPending").textContent   = filtered.filter(s=>s.Status==="Pending"||s.Status==="In-Progress").length;
+  document.getElementById("dTransit").textContent   = filtered.filter(s=>s.Status==="Issue"||s.Status==="Missed Service").length;
+  document.getElementById("dDelivered").textContent = filtered.filter(s=>s.Status==="Serviced"||s.Status==="Complete").length;
+  const recent = [...filtered].reverse().slice(0,5);
   const el = document.getElementById("recentList");
-  if (!recent.length) { el.innerHTML=`<div class="empty"><div class="empty-ico">📦</div><p>No shipments yet</p></div>`; return; }
+  if (!recent.length) { el.innerHTML=`<div class="empty"><div class="empty-ico">📦</div><p>No shipments for this date</p></div>`; return; }
   el.innerHTML = recent.map(s=>{
     const rp = getPhotoUrl(s);
     return `
@@ -1529,14 +1564,16 @@ let tableSortCol = "";
 let tableSortDir = 1;
 
 function renderShipments(ships) {
+  // Apply date filter first, then entity + search
+  let filtered = applyDateFilter(ships);
+
   const entities = ["All", ...new Set(ships.map(s=>s.Entity).filter(Boolean))];
   const tabsEl   = document.getElementById("entityTabs");
   tabsEl.style.display = "flex";
   tabsEl.innerHTML = entities.map(e=>
     `<div class="etab${e===activeEntity?" active":""}" onclick="setEntity('${esc(e)}')">${esc(e)}</div>`
   ).join("");
-  let filtered = ships;
-  if (activeEntity !== "All") filtered = ships.filter(s=>s.Entity===activeEntity);
+  if (activeEntity !== "All") filtered = filtered.filter(s=>s.Entity===activeEntity);
   const q = document.getElementById("searchQ").value.toLowerCase();
   if (q) filtered = filtered.filter(s=>Object.values(s).some(v=>String(v).toLowerCase().includes(q)));
   document.getElementById("shipCount").textContent = filtered.length+" shipment"+(filtered.length!==1?"s":"");
@@ -1585,6 +1622,7 @@ function renderShipments(ships) {
           ${s.Boxes      ?`<span class="chip muted">🗃 ${esc(s.Boxes)} boxes</span>`:""}
           ${s.Assigned   ?`<span class="chip muted">👤 ${esc(s.Assigned)}</span>`:""}
           ${s.Date       ?`<span class="chip muted">📅 ${esc(s.Date)}</span>`:""}
+          ${s.UpdatedAt  ?`<span class="chip muted">🕐 ${esc(fmtUpdated(s.UpdatedAt))}</span>`:""}
         </div>
         ${photoBlock}
         <div class="ship-actions">
@@ -1615,6 +1653,7 @@ function renderShipments(ships) {
     { key:"Date",        label:"Date" },
     { key:"Assigned",    label:"Assigned" },
     { key:"Status",      label:"Status" },
+    { key:"UpdatedAt",   label:"Last updated" },
     { key:"_photo",      label:"Photo",   noSort:true },
     { key:"_actions",    label:"Actions", noSort:true },
   ];
@@ -1648,6 +1687,7 @@ function renderShipments(ships) {
       <td class="td-date">${esc(s.Date||"—")}</td>
       <td class="td-assigned">${s.Assigned?`👤 ${esc(s.Assigned)}`:"—"}</td>
       <td class="td-status"><span class="status-badge ${sb}">${esc(s.Status||"—")}</span></td>
+      <td class="td-date td-updated">${fmtUpdated(s.UpdatedAt)}</td>
       <td class="td-photo">${photoCell}</td>
       <td class="td-actions">
         <div class="tbl-actions">
@@ -1665,7 +1705,7 @@ function renderShipments(ships) {
         <col class="col-id"/><col class="col-entity"/><col class="col-account"/>
         <col class="col-service"/><col class="col-commodity"/><col class="col-boxes"/>
         <col class="col-date"/><col class="col-assigned"/><col class="col-status"/>
-        <col class="col-photo"/><col class="col-actions"/>
+        <col class="col-updated"/><col class="col-photo"/><col class="col-actions"/>
       </colgroup>
       <thead><tr>${thHtml}</tr></thead>
       <tbody>${rowsHtml}</tbody>
@@ -1679,8 +1719,81 @@ function tableSort(col) {
   renderShipments(allShips);
 }
 
+function fmtUpdated(val) {
+  if (!val || String(val).trim() === "") return "—";
+  try {
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return String(val);
+    const now = new Date();
+    const isToday = d.getDate()===now.getDate()&&d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
+    const hhmm = d.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:false});
+    if (isToday) return "Today "+hhmm;
+    return d.toLocaleDateString("en-IN",{day:"2-digit",month:"short"})+" "+hhmm;
+  } catch(e) { return String(val); }
+}
+
 function filterShipments() { renderShipments(allShips); }
 function setEntity(name) { activeEntity = name; renderShipments(allShips); }
+
+// ── DATE FILTER ────────────────────────────────────────────────
+// Returns the ISO date string (YYYY-MM-DD) for today
+function todayISO() {
+  return new Date().toISOString().split("T")[0];
+}
+
+// Filter an array of shipments by activeDateFilter
+// Matches on the shipment's Date field (col G in the sheet)
+function applyDateFilter(ships) {
+  if (activeDateFilter === "all") return ships;
+  const target = activeDateFilter === "today" ? todayISO() : activeDateFilter;
+  return ships.filter(s => {
+    const raw = s.Date || s.date || "";
+    if (!raw) return false;
+    try {
+      return new Date(raw).toISOString().split("T")[0] === target;
+    } catch(e) { return false; }
+  });
+}
+
+// Called by Today / All buttons and date picker
+function setDateFilter(value) {
+  activeDateFilter = value; // "today" | "all" | "YYYY-MM-DD"
+  syncDateFilterUI();
+  renderDashboard(allShips);
+  renderShipments(allShips);
+}
+
+// Keep both bars (dashboard + shipments) in sync with activeDateFilter state
+function syncDateFilterUI() {
+  const isToday  = activeDateFilter === "today";
+  const isAll    = activeDateFilter === "all";
+  const isCustom = !isToday && !isAll;
+  const today    = todayISO();
+
+  // Dashboard bar
+  const dbToday = document.getElementById("dash-btn-today");
+  const dbAll   = document.getElementById("dash-btn-all");
+  const dbPick  = document.getElementById("dash-date-pick");
+  if (dbToday) dbToday.classList.toggle("active", isToday);
+  if (dbAll)   dbAll.classList.toggle("active", isAll);
+  if (dbPick)  {
+    dbPick.classList.toggle("active", isCustom);
+    dbPick.value = isCustom ? activeDateFilter : "";
+    dbPick.max   = today;
+  }
+
+  // Shipments bar
+  const sbToday = document.getElementById("ship-btn-today");
+  const sbAll   = document.getElementById("ship-btn-all");
+  const sbPick  = document.getElementById("ship-date-pick");
+  if (sbToday) sbToday.classList.toggle("active", isToday);
+  if (sbAll)   sbAll.classList.toggle("active", isAll);
+  if (sbPick)  {
+    sbPick.classList.toggle("active", isCustom);
+    sbPick.value = isCustom ? activeDateFilter : "";
+    sbPick.max   = today;
+  }
+}
 
 // ── CREATE SHIPMENT ────────────────────────────────────────────
 async function createShipment() {
@@ -1778,7 +1891,6 @@ function closeStatusModal() { closeOverlay("statusOverlay"); removePhoto(); }
 function photoSelected(input) {
   if (!input.files || !input.files[0]) return;
   const file = input.files[0];
-  if (file.size > 4 * 1024 * 1024) { toast("⚠ Photo must be under 4MB","er"); return; }
   // [FIX: client-side MIME check] Validate image type before upload
   const allowed = ["image/jpeg","image/jpg","image/png","image/gif","image/webp","image/heic"];
   if (!allowed.includes(file.type.toLowerCase())) {
@@ -1974,9 +2086,7 @@ function toast(msg,type="ok"){
 // [FIX: robust api()] Handles network errors, non-JSON responses, and expired sessions
 async function api(payload) {
   try {
-    // No Content-Type header — "application/json" triggers a CORS preflight OPTIONS request
-    // which Apps Script does not handle, causing fetch() to throw a network error.
-    // Apps Script reads e.postData.contents correctly without declaring the content type.
+    // No Content-Type header — triggers CORS preflight that Apps Script cannot handle
     const res  = await fetch(SCRIPT_URL, {
       method:   "POST",
       body:     JSON.stringify(payload),
