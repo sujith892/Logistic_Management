@@ -1220,7 +1220,13 @@ body.admin-mode #toast {
         <div class="photo-upload-txt">Tap to take photo or <strong>choose from gallery</strong></div>
       </div>
       <div class="photo-preview" id="photoPreview">
-        <img id="photoPreviewImg" src="" alt="preview"/>
+        <div id="photoPreviewThumb" onclick="showPhotoPreview()"
+             style="display:none;padding:11px 14px;cursor:pointer;font-size:13px;
+                    font-weight:600;color:var(--accent);letter-spacing:0.3px;
+                    align-items:center;gap:8px;">
+          <span>👁</span><span id="photoPreviewLabel"></span>
+        </div>
+        <img id="photoPreviewImg" src="" alt="preview" style="display:none;"/>
         <button class="photo-preview-remove" onclick="removePhoto()">✕</button>
       </div>
       <div class="upload-progress" id="uploadProgress">
@@ -1277,11 +1283,107 @@ body.admin-mode #toast {
   </div>
 </div>
 
+<style>
+/* ── CHECK IN / OUT buttons ── */
+.btn-checkin{width:100%;padding:10px 0;border:none;border-radius:10px;
+  background:linear-gradient(135deg,#007a3d,#00cc66);
+  color:#fff;font-family:var(--font);font-size:13px;font-weight:700;
+  cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;}
+.btn-checkin:active{transform:scale(.97);}
+.btn-checkin:disabled{opacity:.55;cursor:not-allowed;}
+.btn-checkout{width:100%;padding:10px 0;border:none;border-radius:10px;
+  background:linear-gradient(135deg,#b33000,#ff5500);
+  color:#fff;font-family:var(--font);font-size:13px;font-weight:700;
+  cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;}
+.btn-checkout:active{transform:scale(.97);}
+.btn-checkout:disabled{opacity:.55;cursor:not-allowed;}
+.ci-stamp{font-size:11px;color:var(--muted);text-align:center;padding:3px 0;letter-spacing:.3px;}
+.ci-stamp b{color:var(--green);}
+.co-stamp{font-size:11px;color:var(--muted);text-align:center;padding:3px 0;letter-spacing:.3px;}
+.co-stamp b{color:#ff6b35;}
+</style>
+
+<script>
+/* Defined early — img onerror/onload must be available before DOM parses */
+function pvImgLoaded() {
+  document.getElementById("pvLoadingText").style.display = "none";
+  document.getElementById("pvActions").style.display = "flex";
+}
+function pvImgError() {
+  document.getElementById("photoViewerImg").style.display = "none";
+  document.getElementById("photoViewerImgWrap").style.display = "none";
+  document.getElementById("photoViewerFallback").style.display = "flex";
+}
+function closePhotoViewer() {
+  document.getElementById("photoViewer").classList.remove("open");
+  document.getElementById("photoViewerImg").src = "";
+}
+function showUploadPreview(thumbUrl, fullUrl, name) {
+  document.getElementById("uspLoading").style.display = "flex";
+  document.getElementById("uspBroken").style.display  = "none";
+  var im = document.getElementById("uspImg");
+  im.style.opacity = "0"; im.src = "";
+  document.getElementById("uspLabel").textContent = name || "Uploaded photo";
+  document.getElementById("uspLink").href = fullUrl || "#";
+  document.getElementById("uspModal").classList.add("open");
+  setTimeout(function(){ im.src = thumbUrl; }, 80);
+}
+function closeUploadPreview() {
+  document.getElementById("uspModal").classList.remove("open");
+  document.getElementById("uspImg").src = "";
+}
+</script>
+
+<!-- ── UPLOAD SUCCESS PREVIEW MODAL ── -->
+<style>
+#uspModal.open{display:flex!important;}
+.usp-box{width:100%;max-width:340px;background:#0d1b26;border:1px solid rgba(0,212,255,.35);border-radius:16px;overflow:hidden;box-shadow:0 0 48px rgba(0,212,255,.12);animation:uspSlide .22s ease;}
+@keyframes uspSlide{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.usp-head{padding:14px 16px;border-bottom:1px solid #1a3a5c;display:flex;align-items:center;justify-content:space-between;background:rgba(0,212,255,.05);}
+.usp-head-title{font-size:13px;font-weight:700;color:#00d4ff;letter-spacing:1px;text-transform:uppercase;}
+.usp-x{background:rgba(255,255,255,.08);border:none;color:#e0f0ff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;}
+.usp-img-box{position:relative;background:#060d14;min-height:190px;max-height:280px;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+#uspImg{width:100%;max-height:280px;object-fit:contain;display:block;transition:opacity .35s;}
+#uspLoading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#4a7a9b;font-size:13px;}
+#uspBroken{display:none;position:absolute;inset:0;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#4a7a9b;font-size:12px;}
+.usp-saved{position:absolute;top:10px;left:10px;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.4);color:#00ff88;font-size:10px;font-weight:700;border-radius:20px;padding:3px 9px;}
+.usp-foot{padding:12px 16px;border-top:1px solid #1a3a5c;}
+.usp-name{font-size:11px;color:#4a7a9b;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.usp-btns{display:flex;gap:8px;}
+.usp-btn{flex:1;padding:9px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;}
+.usp-btn-primary{background:linear-gradient(135deg,#0066cc,#00d4ff);color:#fff;}
+.usp-btn-ghost{background:rgba(255,255,255,.07);color:#e0f0ff;border:1px solid #1a3a5c;}
+</style>
+<div id="uspModal" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(6,13,20,.92);align-items:center;justify-content:center;padding:20px;"
+     onclick="if(event.target===this)closeUploadPreview()">
+  <div class="usp-box">
+    <div class="usp-head">
+      <span class="usp-head-title">📷 Photo Uploaded</span>
+      <button class="usp-x" onclick="closeUploadPreview()">✕</button>
+    </div>
+    <div class="usp-img-box">
+      <img id="uspImg" src="" alt=""
+           onload="this.style.opacity='1';document.getElementById('uspLoading').style.display='none';"
+           onerror="this.style.display='none';document.getElementById('uspLoading').style.display='none';document.getElementById('uspBroken').style.display='flex';"/>
+      <div id="uspLoading">⏳ Loading preview…</div>
+      <div id="uspBroken"><span style="font-size:2rem">🖼️</span><span>Preview unavailable</span></div>
+      <div class="usp-saved">✓ SAVED</div>
+    </div>
+    <div class="usp-foot">
+      <div class="usp-name" id="uspLabel"></div>
+      <div class="usp-btns">
+        <a id="uspLink" href="#" target="_blank" class="usp-btn usp-btn-primary">🔗 Open Full Image</a>
+        <button class="usp-btn usp-btn-ghost" onclick="closeUploadPreview()">✕ Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZk92gEG1UvdbLZZ2Anb3UdeoxhjLqkkRI9kNC66w3BBYMDUAzsEp68SNNIaCsyQdO-w/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNS4r7AE9MQz9sZU0tHElMuL6WegRN4_U5-6hoXpLxmNia1MpArf4wsR1SIjD3cTVc/exec";
 
 // ── STATE ──────────────────────────────────────────────────────
 let session      = { username:"", token:"", role:"", driverName:"", email:"" };
@@ -1563,6 +1665,47 @@ function getPhotoUrl(s) {
 let tableSortCol = "";
 let tableSortDir = 1;
 
+
+function renderCheckInBtn(s) {
+  const checkedIn  = s.CheckInAt  && String(s.CheckInAt).trim()  !== "";
+  const checkedOut = s.CheckOutAt && String(s.CheckOutAt).trim() !== "";
+  const sid = esc(s.ID || "");
+  if (!checkedIn) {
+    return `<button class="btn-checkin" onclick="doCheckIn('${sid}','checkIn',this)">✅ Check In</button>
+            <div class="ci-stamp" id="ci_${sid}"></div>`;
+  }
+  if (checkedIn && !checkedOut) {
+    return `<div class="ci-stamp">✅ Checked in: <b>${esc(s.CheckInAt)}</b></div>
+            <button class="btn-checkout" onclick="doCheckIn('${sid}','checkOut',this)">🔴 Check Out</button>
+            <div class="co-stamp" id="co_${sid}"></div>`;
+  }
+  return `<div class="ci-stamp">✅ In: <b>${esc(s.CheckInAt)}</b></div>
+          <div class="co-stamp">🔴 Out: <b>${esc(s.CheckOutAt)}</b></div>`;
+}
+
+async function doCheckIn(shipmentId, actionType, btn) {
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<span class="spin"></span>'; btn.disabled = true;
+  try {
+    const res = await api(authPayload({ action:"checkInOut", shipmentId:shipmentId, action_type:actionType }));
+    if (!res.success) throw new Error(res.message);
+    if (actionType === "checkIn") {
+      btn.className = "btn-checkin"; btn.innerHTML = "✅ Checked In"; btn.disabled = true;
+      const el = document.getElementById("ci_" + shipmentId);
+      if (el) el.innerHTML = "✅ Checked in: <b>" + res.timestamp + "</b>";
+    } else {
+      btn.className = "btn-checkout"; btn.innerHTML = "🔴 Checked Out"; btn.disabled = true;
+      const el = document.getElementById("co_" + shipmentId);
+      if (el) el.innerHTML = "🔴 Checked out: <b>" + res.timestamp + "</b>";
+    }
+    toast("✅ " + (actionType === "checkIn" ? "Check In" : "Check Out") + " recorded!", "ok");
+    setTimeout(loadShipments, 1500);
+  } catch(e) {
+    toast("❌ Failed: " + e.message, "er");
+    btn.innerHTML = orig; btn.disabled = false;
+  }
+}
+
 function renderShipments(ships) {
   // Apply date filter first, then entity + search
   let filtered = applyDateFilter(ships);
@@ -1625,8 +1768,9 @@ function renderShipments(ships) {
           ${s.UpdatedAt  ?`<span class="chip muted">🕐 ${esc(fmtUpdated(s.UpdatedAt))}</span>`:""}
         </div>
         ${photoBlock}
-        <div class="ship-actions">
-          <button class="sab-status" onclick='openStatus(${JSON.stringify(s)})'>🔄 Update Status</button>
+        <div class="ship-actions" style="flex-direction:column;gap:8px">
+          ${renderCheckInBtn(s)}
+          <button class="sab-status" style="width:100%" onclick='openStatus(${JSON.stringify(s)})'>🔄 Update Status</button>
         </div>
       </div>`;
     }).join("");
@@ -1653,7 +1797,9 @@ function renderShipments(ships) {
     { key:"Date",        label:"Date" },
     { key:"Assigned",    label:"Assigned" },
     { key:"Status",      label:"Status" },
-    { key:"UpdatedAt",   label:"Last updated" },
+    { key:"UpdatedAt",   label:"Last Updated" },
+    { key:"CheckInAt",   label:"Check In" },
+    { key:"CheckOutAt",  label:"Check Out" },
     { key:"_photo",      label:"Photo",   noSort:true },
     { key:"_actions",    label:"Actions", noSort:true },
   ];
@@ -1688,6 +1834,8 @@ function renderShipments(ships) {
       <td class="td-assigned">${s.Assigned?`👤 ${esc(s.Assigned)}`:"—"}</td>
       <td class="td-status"><span class="status-badge ${sb}">${esc(s.Status||"—")}</span></td>
       <td class="td-date td-updated">${fmtUpdated(s.UpdatedAt)}</td>
+      <td class="td-date" style="color:var(--green);font-size:12px">${s.CheckInAt  ? esc(s.CheckInAt)  : '<span style="color:var(--muted)">—</span>'}</td>
+      <td class="td-date" style="color:#ff6b35;font-size:12px">${s.CheckOutAt ? esc(s.CheckOutAt) : '<span style="color:var(--muted)">—</span>'}</td>
       <td class="td-photo">${photoCell}</td>
       <td class="td-actions">
         <div class="tbl-actions">
@@ -1705,7 +1853,8 @@ function renderShipments(ships) {
         <col class="col-id"/><col class="col-entity"/><col class="col-account"/>
         <col class="col-service"/><col class="col-commodity"/><col class="col-boxes"/>
         <col class="col-date"/><col class="col-assigned"/><col class="col-status"/>
-        <col class="col-updated"/><col class="col-photo"/><col class="col-actions"/>
+        <col class="col-updated"/><col style="width:110px"/><col style="width:110px"/>
+        <col class="col-photo"/><col class="col-actions"/>
       </colgroup>
       <thead><tr>${thHtml}</tr></thead>
       <tbody>${rowsHtml}</tbody>
@@ -1873,8 +2022,8 @@ async function delShipment(id, btn) {
 }
 
 // ── STATUS UPDATE (driver) ─────────────────────────────────────
-let selectedPhotoBase64 = null;
-let selectedPhotoMime   = null;
+let selectedPhotoBase64 = null; // set lazily when user taps preview
+let selectedPhotoMime   = null;  // mime type of selected file
 
 function openStatus(s) {
   document.getElementById("s-ID").value = s.ID;
@@ -1891,22 +2040,44 @@ function closeStatusModal() { closeOverlay("statusOverlay"); removePhoto(); }
 function photoSelected(input) {
   if (!input.files || !input.files[0]) return;
   const file = input.files[0];
-  // [FIX: client-side MIME check] Validate image type before upload
-  const allowed = ["image/jpeg","image/jpg","image/png","image/gif","image/webp","image/heic"];
-  if (!allowed.includes(file.type.toLowerCase())) {
-    toast("⚠ Only image files allowed (JPG, PNG, WEBP, GIF)","er");
-    input.value = "";
-    return;
+  // No size limit — file goes via google.script.run, not fetch
+  const allowed = ["image/jpeg","image/jpg","image/png","image/gif","image/webp",
+                   "image/heic","image/heif","image/bmp"];
+  if (file.type && !allowed.includes(file.type.toLowerCase())) {
+    toast("⚠ Only image files allowed","er"); input.value = ""; return;
   }
+  // Store file reference — no FileReader yet (lazy preview on tap)
+  selectedPhotoBase64 = null;
+  selectedPhotoMime   = file.type || "image/jpeg";
+  window._selectedPhotoFile = file;
+
+  document.getElementById("photoPreview").style.display = "block";
+  document.getElementById("photoPreviewImg").style.display = "none";
+  document.getElementById("photoPreviewImg").src = "";
+  const thumb = document.getElementById("photoPreviewThumb");
+  thumb.style.display = "flex";
+  document.getElementById("photoPreviewLabel").textContent =
+    "Tap to preview · " + file.name + " (" + (file.size/1024/1024).toFixed(1) + " MB)";
+  document.querySelector(".photo-upload-area .photo-upload-ico").textContent = "✅";
+  document.querySelector(".photo-upload-area .photo-upload-txt").innerHTML =
+    `<strong>${esc(file.name)}</strong> <span style="color:var(--muted);font-size:11px">(${(file.size/1024/1024).toFixed(1)} MB)</span>`;
+}
+
+// Lazy preview — only loads when driver explicitly taps
+function showPhotoPreview() {
+  const file = window._selectedPhotoFile;
+  if (!file) return;
+  document.getElementById("photoPreviewLabel").textContent = "⏳ Loading…";
   const reader = new FileReader();
-  reader.onload = function(e) {
-    const dataUrl = e.target.result;
-    selectedPhotoBase64 = dataUrl.split(",")[1];
-    selectedPhotoMime   = file.type || "image/jpeg";
-    document.getElementById("photoPreviewImg").src = dataUrl;
-    document.getElementById("photoPreview").style.display = "block";
-    document.querySelector(".photo-upload-area .photo-upload-ico").textContent = "✅";
-    document.querySelector(".photo-upload-area .photo-upload-txt").innerHTML = `<strong>${esc(file.name)}</strong>`;
+  reader.onload = function(ev) {
+    selectedPhotoBase64 = ev.target.result.split(",")[1];
+    const img = document.getElementById("photoPreviewImg");
+    img.src = ev.target.result;
+    img.style.display = "block";
+    document.getElementById("photoPreviewThumb").style.display = "none";
+  };
+  reader.onerror = () => {
+    document.getElementById("photoPreviewLabel").textContent = "Preview not available for this file type";
   };
   reader.readAsDataURL(file);
 }
@@ -1928,9 +2099,12 @@ function photoDrop(e) {
 
 function removePhoto() {
   selectedPhotoBase64 = null; selectedPhotoMime = null;
+  window._selectedPhotoFile = null;
   document.getElementById("photoInput").value = "";
   document.getElementById("photoPreview").style.display = "none";
   document.getElementById("photoPreviewImg").src = "";
+  document.getElementById("photoPreviewImg").style.display = "none";
+  document.getElementById("photoPreviewThumb").style.display = "none";
   document.querySelector(".photo-upload-area .photo-upload-ico").textContent = "📸";
   document.querySelector(".photo-upload-area .photo-upload-txt").innerHTML =
     `Tap to take photo or <strong>choose from gallery</strong>`;
@@ -1944,31 +2118,67 @@ async function saveStatus() {
   if (!status) { toast("⚠ Please select a status","er"); return; }
   const btn = document.getElementById("saveStatusBtn");
   btn.innerHTML = '<span class="spin"></span>'; btn.disabled = true;
-  if (selectedPhotoBase64) {
-    document.getElementById("uploadProgress").style.display = "block";
-    let pct = 0;
-    const pBar = document.getElementById("uploadProgressBar");
-    const pInt = setInterval(() => { pct = Math.min(pct + 8, 85); pBar.style.width = pct + "%"; }, 200);
-    try {
-      const res = await api(authPayload({
-        action:"updateShipment", ID:id, Status:status,
-        photoBase64: selectedPhotoBase64, photoMime: selectedPhotoMime,
-        photoName: `${id}_${session.username}_${Date.now()}.jpg`
-      }));
-      clearInterval(pInt); pBar.style.width = "100%";
-      setTimeout(() => { document.getElementById("uploadProgress").style.display = "none"; }, 500);
-      if (res.success) {
-        toast("✅ Status updated" + (res.photoUrl ? " + Photo saved 📷" : ""), "ok");
-        closeStatusModal(); loadShipments();
-      } else throw new Error(res.message);
-    } catch(e) { clearInterval(pInt); toast("❌ " + e.message, "er"); }
-  } else {
-    try {
-      const res = await api(authPayload({ action:"updateShipment", ID:id, Status:status }));
-      if (res.success) { toast("✅ Status updated: "+status,"ok"); closeStatusModal(); loadShipments(); }
-      else throw new Error(res.message);
-    } catch(e) { toast("❌ "+e.message,"er"); }
+
+  // Step 1 — save status via normal fetch/JSON
+  try {
+    const statusRes = await api(authPayload({ action:"updateShipment", ID:id, Status:status }));
+    if (!statusRes.success) throw new Error(statusRes.message);
+  } catch(e) {
+    toast("❌ " + e.message, "er");
+    btn.innerHTML = "<span>Update Status</span>"; btn.disabled = false;
+    return;
   }
+
+  // Step 2 — upload photo via google.script.run (same-origin, no CORS, no size limit)
+  const file = window._selectedPhotoFile;
+  if (file) {
+    document.getElementById("uploadProgress").style.display = "block";
+    const pBar = document.getElementById("uploadProgressBar");
+    pBar.style.width = "10%";
+
+    // Read file as base64 first
+    let b64;
+    try {
+      b64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = ev => resolve(ev.target.result.split(",")[1]);
+        reader.onerror = ()  => reject(new Error("Could not read file"));
+        reader.readAsDataURL(file);
+      });
+    } catch(readErr) {
+      document.getElementById("uploadProgress").style.display = "none";
+      toast("✅ Status updated — photo read failed: " + readErr.message, "in");
+      closeStatusModal(); loadShipments();
+      btn.innerHTML = "<span>Update Status</span>"; btn.disabled = false;
+      return;
+    }
+
+    pBar.style.width = "40%";
+    const fileName = id + "_" + session.username + "_" + Date.now() + ".jpg";
+
+    // Upload via google.script.run — file goes directly through Google infrastructure
+    google.script.run
+      .withSuccessHandler(function(photoUrl) {
+        pBar.style.width = "100%";
+        setTimeout(() => { document.getElementById("uploadProgress").style.display = "none"; }, 500);
+        toast("✅ Status updated + Photo saved 📷", "ok");
+        closeStatusModal(); loadShipments();
+        btn.innerHTML = "<span>Update Status</span>"; btn.disabled = false;
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById("uploadProgress").style.display = "none";
+        toast("✅ Status updated — photo failed: " + err.message, "in");
+        closeStatusModal(); loadShipments();
+        btn.innerHTML = "<span>Update Status</span>"; btn.disabled = false;
+      })
+      .uploadFile(b64, fileName, file.type || "image/jpeg",
+                  id, session.token, session.username);
+    // Return here — btn re-enable happens in success/failure handler above
+    return;
+  }
+
+  toast("✅ Status updated: " + status, "ok");
+  closeStatusModal(); loadShipments();
   btn.innerHTML = "<span>Update Status</span>"; btn.disabled = false;
 }
 
@@ -1987,19 +2197,6 @@ function viewPhoto(url) {
   imgEl.src = url;
   viewer.classList.add("open");
   viewer.onclick = function(e) { if (e.target === viewer) closePhotoViewer(); };
-}
-function pvImgLoaded() {
-  document.getElementById("pvLoadingText").style.display = "none";
-  document.getElementById("pvActions").style.display = "flex";
-}
-function pvImgError() {
-  document.getElementById("photoViewerImg").style.display = "none";
-  document.getElementById("photoViewerImgWrap").style.display = "none";
-  document.getElementById("photoViewerFallback").style.display = "flex";
-}
-function closePhotoViewer() {
-  document.getElementById("photoViewer").classList.remove("open");
-  document.getElementById("photoViewerImg").src = "";
 }
 
 // ── DRIVERS (admin) ────────────────────────────────────────────
