@@ -809,6 +809,24 @@ body.admin-mode #toast {
   outline:none;cursor:pointer;
 }
 .df-date-input:focus,.df-date-input.active{border-color:var(--accent);color:var(--accent);}
+
+/* ── CHECK IN / OUT ── */
+.btn-checkin{width:100%;padding:10px 0;border:none;border-radius:10px;
+  background:linear-gradient(135deg,#007a3d,#00cc66);color:#fff;
+  font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;
+  letter-spacing:.5px;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;}
+.btn-checkin:active{transform:scale(.97);}
+.btn-checkin:disabled{opacity:.55;cursor:not-allowed;}
+.btn-checkout{width:100%;padding:10px 0;border:none;border-radius:10px;
+  background:linear-gradient(135deg,#b33000,#ff5500);color:#fff;
+  font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;
+  letter-spacing:.5px;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;}
+.btn-checkout:active{transform:scale(.97);}
+.btn-checkout:disabled{opacity:.55;cursor:not-allowed;}
+.ci-stamp{font-size:11px;color:var(--muted);text-align:center;padding:3px 0;letter-spacing:.3px;}
+.ci-stamp b{color:var(--green);}
+.co-stamp{font-size:11px;color:var(--muted);text-align:center;padding:3px 0;letter-spacing:.3px;}
+.co-stamp b{color:#ff6b35;}
 </style>
 </head>
 <body>
@@ -1237,8 +1255,17 @@ body.admin-mode #toast {
     <div style="display:flex;gap:8px;margin-top:14px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeStatusModal()">Cancel</button>
       <button class="btn btn-primary" style="flex:2" id="saveStatusBtn" onclick="saveStatus()">
-        <span>Update Status</span>
+        <span>✔ Update Status</span>
       </button>
+    </div>
+    <div style="margin-top:8px">
+      <button class="btn btn-primary" id="uploadPhotoBtn" onclick="uploadPhotoOnly()"
+              style="width:100%;background:linear-gradient(135deg,#005fa3,#00b8d9);opacity:.45;cursor:not-allowed" disabled>
+        <span>📷 Upload Photo</span>
+      </button>
+      <div id="uploadPhotoHint" style="font-size:11px;color:var(--muted);text-align:center;margin-top:5px">
+        Save status first, then upload photo
+      </div>
     </div>
   </div>
 </div>
@@ -1283,28 +1310,8 @@ body.admin-mode #toast {
   </div>
 </div>
 
-<style>
-/* ── CHECK IN / OUT buttons ── */
-.btn-checkin{width:100%;padding:10px 0;border:none;border-radius:10px;
-  background:linear-gradient(135deg,#007a3d,#00cc66);
-  color:#fff;font-family:var(--font);font-size:13px;font-weight:700;
-  cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;}
-.btn-checkin:active{transform:scale(.97);}
-.btn-checkin:disabled{opacity:.55;cursor:not-allowed;}
-.btn-checkout{width:100%;padding:10px 0;border:none;border-radius:10px;
-  background:linear-gradient(135deg,#b33000,#ff5500);
-  color:#fff;font-family:var(--font);font-size:13px;font-weight:700;
-  cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;}
-.btn-checkout:active{transform:scale(.97);}
-.btn-checkout:disabled{opacity:.55;cursor:not-allowed;}
-.ci-stamp{font-size:11px;color:var(--muted);text-align:center;padding:3px 0;letter-spacing:.3px;}
-.ci-stamp b{color:var(--green);}
-.co-stamp{font-size:11px;color:var(--muted);text-align:center;padding:3px 0;letter-spacing:.3px;}
-.co-stamp b{color:#ff6b35;}
-</style>
-
 <script>
-/* Defined early — img onerror/onload must be available before DOM parses */
+/* Defined early — img onerror/onload fire before main script parses */
 function pvImgLoaded() {
   document.getElementById("pvLoadingText").style.display = "none";
   document.getElementById("pvActions").style.display = "flex";
@@ -1333,8 +1340,6 @@ function closeUploadPreview() {
   document.getElementById("uspImg").src = "";
 }
 </script>
-
-<!-- ── UPLOAD SUCCESS PREVIEW MODAL ── -->
 <style>
 #uspModal.open{display:flex!important;}
 .usp-box{width:100%;max-width:340px;background:#0d1b26;border:1px solid rgba(0,212,255,.35);border-radius:16px;overflow:hidden;box-shadow:0 0 48px rgba(0,212,255,.12);animation:uspSlide .22s ease;}
@@ -1378,13 +1383,15 @@ function closeUploadPreview() {
     </div>
   </div>
 </div>
-
 <div id="toast"></div>
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNS4r7AE9MQz9sZU0tHElMuL6WegRN4_U5-6hoXpLxmNia1MpArf4wsR1SIjD3cTVc/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDbN3ewtSK5Sc1em7BsRMNz1XGNlVaYWAVXpzUcG5xtDWcUl0vyVRnrwi5AeQnbUA/exec";
 
+//const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3-GEN9GKklZUHKsr2ewhjUfvdgW8-sO7Y9pSikAFzYg0KsZwiSCXHxeZFZt764F6u/exec";
+
+//https://script.google.com/macros/s/AKfycbzDbN3ewtSK5Sc1em7BsRMNz1XGNlVaYWAVXpzUcG5xtDWcUl0vyVRnrwi5AeQnbUA/exec
 // ── STATE ──────────────────────────────────────────────────────
 let session      = { username:"", token:"", role:"", driverName:"", email:"" };
 let allShips     = [];
@@ -1666,42 +1673,43 @@ let tableSortCol = "";
 let tableSortDir = 1;
 
 
+// ── CHECK IN / OUT ──────────────────────────────────────────────
 function renderCheckInBtn(s) {
-  const checkedIn  = s.CheckInAt  && String(s.CheckInAt).trim()  !== "";
-  const checkedOut = s.CheckOutAt && String(s.CheckOutAt).trim() !== "";
-  const sid = esc(s.ID || "");
+  var checkedIn  = s.CheckInAt  && String(s.CheckInAt).trim()  !== "";
+  var checkedOut = s.CheckOutAt && String(s.CheckOutAt).trim() !== "";
+  var sid = esc(s.ID || "");
   if (!checkedIn) {
-    return `<button class="btn-checkin" onclick="doCheckIn('${sid}','checkIn',this)">✅ Check In</button>
-            <div class="ci-stamp" id="ci_${sid}"></div>`;
+    return "<button class=\"btn-checkin\" onclick=\"doCheckIn('" + sid + "','checkIn',this)\">\u2705 Check In</button>" +
+           "<div class=\"ci-stamp\" id=\"ci_" + sid + "\"></div>";
   }
   if (checkedIn && !checkedOut) {
-    return `<div class="ci-stamp">✅ Checked in: <b>${esc(s.CheckInAt)}</b></div>
-            <button class="btn-checkout" onclick="doCheckIn('${sid}','checkOut',this)">🔴 Check Out</button>
-            <div class="co-stamp" id="co_${sid}"></div>`;
+    return "<div class=\"ci-stamp\">\u2705 Checked in: <b>" + esc(s.CheckInAt) + "</b></div>" +
+           "<button class=\"btn-checkout\" onclick=\"doCheckIn('" + sid + "','checkOut',this)\">\uD83D\uDD34 Check Out</button>" +
+           "<div class=\"co-stamp\" id=\"co_" + sid + "\"></div>";
   }
-  return `<div class="ci-stamp">✅ In: <b>${esc(s.CheckInAt)}</b></div>
-          <div class="co-stamp">🔴 Out: <b>${esc(s.CheckOutAt)}</b></div>`;
+  return "<div class=\"ci-stamp\">\u2705 In: <b>" + esc(s.CheckInAt) + "</b></div>" +
+         "<div class=\"co-stamp\">\uD83D\uDD34 Out: <b>" + esc(s.CheckOutAt) + "</b></div>";
 }
 
 async function doCheckIn(shipmentId, actionType, btn) {
-  const orig = btn.innerHTML;
+  var orig = btn.innerHTML;
   btn.innerHTML = '<span class="spin"></span>'; btn.disabled = true;
   try {
-    const res = await api(authPayload({ action:"checkInOut", shipmentId:shipmentId, action_type:actionType }));
+    var res = await api(authPayload({ action:"checkInOut", shipmentId:shipmentId, action_type:actionType }));
     if (!res.success) throw new Error(res.message);
     if (actionType === "checkIn") {
-      btn.className = "btn-checkin"; btn.innerHTML = "✅ Checked In"; btn.disabled = true;
-      const el = document.getElementById("ci_" + shipmentId);
-      if (el) el.innerHTML = "✅ Checked in: <b>" + res.timestamp + "</b>";
+      btn.className = "btn-checkin"; btn.innerHTML = "\u2705 Checked In"; btn.disabled = true;
+      var el = document.getElementById("ci_" + shipmentId);
+      if (el) el.innerHTML = "\u2705 Checked in: <b>" + res.timestamp + "</b>";
     } else {
-      btn.className = "btn-checkout"; btn.innerHTML = "🔴 Checked Out"; btn.disabled = true;
-      const el = document.getElementById("co_" + shipmentId);
-      if (el) el.innerHTML = "🔴 Checked out: <b>" + res.timestamp + "</b>";
+      btn.className = "btn-checkout"; btn.innerHTML = "\uD83D\uDD34 Checked Out"; btn.disabled = true;
+      var el2 = document.getElementById("co_" + shipmentId);
+      if (el2) el2.innerHTML = "\uD83D\uDD34 Checked out: <b>" + res.timestamp + "</b>";
     }
-    toast("✅ " + (actionType === "checkIn" ? "Check In" : "Check Out") + " recorded!", "ok");
+    toast("\u2705 " + (actionType === "checkIn" ? "Check In" : "Check Out") + " recorded!", "ok");
     setTimeout(loadShipments, 1500);
   } catch(e) {
-    toast("❌ Failed: " + e.message, "er");
+    toast("\u274C Failed: " + e.message, "er");
     btn.innerHTML = orig; btn.disabled = false;
   }
 }
@@ -1797,7 +1805,7 @@ function renderShipments(ships) {
     { key:"Date",        label:"Date" },
     { key:"Assigned",    label:"Assigned" },
     { key:"Status",      label:"Status" },
-    { key:"UpdatedAt",   label:"Last Updated" },
+    { key:"UpdatedAt",   label:"Last updated" },
     { key:"CheckInAt",   label:"Check In" },
     { key:"CheckOutAt",  label:"Check Out" },
     { key:"_photo",      label:"Photo",   noSort:true },
@@ -1853,8 +1861,7 @@ function renderShipments(ships) {
         <col class="col-id"/><col class="col-entity"/><col class="col-account"/>
         <col class="col-service"/><col class="col-commodity"/><col class="col-boxes"/>
         <col class="col-date"/><col class="col-assigned"/><col class="col-status"/>
-        <col class="col-updated"/><col style="width:110px"/><col style="width:110px"/>
-        <col class="col-photo"/><col class="col-actions"/>
+        <col class="col-updated"/><col style="width:110px"/><col style="width:110px"/><col class="col-photo"/><col class="col-actions"/>
       </colgroup>
       <thead><tr>${thHtml}</tr></thead>
       <tbody>${rowsHtml}</tbody>
@@ -2032,6 +2039,11 @@ function openStatus(s) {
   sSt.value = s.Status || "";
   applyStatusColor(sSt);
   removePhoto();
+  const upBtn = document.getElementById("uploadPhotoBtn");
+  upBtn.disabled = true; upBtn.style.opacity = ".45"; upBtn.style.cursor = "not-allowed";
+  upBtn.innerHTML = "<span>📷 Upload Photo</span>";
+  upBtn.dataset.shipmentId = s.ID;
+  document.getElementById("uploadPhotoHint").textContent = "Save status first, then upload photo";
   document.getElementById("statusOverlay").classList.add("open");
 }
 
@@ -2115,71 +2127,71 @@ function removePhoto() {
 async function saveStatus() {
   const id     = document.getElementById("s-ID").value;
   const status = document.getElementById("s-Status").value;
-  if (!status) { toast("⚠ Please select a status","er"); return; }
+  if (!status) { toast("⚠ Please select a status", "er"); return; }
   const btn = document.getElementById("saveStatusBtn");
   btn.innerHTML = '<span class="spin"></span>'; btn.disabled = true;
-
-  // Step 1 — save status via normal fetch/JSON
   try {
-    const statusRes = await api(authPayload({ action:"updateShipment", ID:id, Status:status }));
-    if (!statusRes.success) throw new Error(statusRes.message);
-  } catch(e) {
-    toast("❌ " + e.message, "er");
-    btn.innerHTML = "<span>Update Status</span>"; btn.disabled = false;
-    return;
-  }
+    const res = await api(authPayload({ action:"updateShipment", ID:id, Status:status }));
+    if (!res.success) throw new Error(res.message);
+    toast("✅ Status saved: " + status, "ok");
+    loadShipments();
+    const upBtn = document.getElementById("uploadPhotoBtn");
+    upBtn.disabled = false; upBtn.style.opacity = "1"; upBtn.style.cursor = "pointer";
+    upBtn.dataset.shipmentId = id;
+    document.getElementById("uploadPhotoHint").textContent =
+      window._selectedPhotoFile ? "Photo ready — tap Upload Photo" : "Select a photo, then tap Upload Photo";
+  } catch(e) { toast("❌ " + e.message, "er"); }
+  btn.innerHTML = "<span>✔ Update Status</span>"; btn.disabled = false;
+}
 
-  // Step 2 — upload photo via google.script.run (same-origin, no CORS, no size limit)
+async function uploadPhotoOnly() {
   const file = window._selectedPhotoFile;
-  if (file) {
-    document.getElementById("uploadProgress").style.display = "block";
-    const pBar = document.getElementById("uploadProgressBar");
-    pBar.style.width = "10%";
+  if (!file) { toast("⚠ Select a photo first", "er"); return; }
+  const btn = document.getElementById("uploadPhotoBtn");
+  const id  = btn.dataset.shipmentId || document.getElementById("s-ID").value;
+  if (!id)  { toast("⚠ Save status first", "er"); return; }
 
-    // Read file as base64 first
-    let b64;
-    try {
-      b64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload  = ev => resolve(ev.target.result.split(",")[1]);
-        reader.onerror = ()  => reject(new Error("Could not read file"));
-        reader.readAsDataURL(file);
-      });
-    } catch(readErr) {
-      document.getElementById("uploadProgress").style.display = "none";
-      toast("✅ Status updated — photo read failed: " + readErr.message, "in");
-      closeStatusModal(); loadShipments();
-      btn.innerHTML = "<span>Update Status</span>"; btn.disabled = false;
-      return;
-    }
+  btn.innerHTML = '<span class="spin"></span>'; btn.disabled = true;
+  document.getElementById("uploadProgress").style.display = "block";
+  const pBar = document.getElementById("uploadProgressBar");
+  pBar.style.width = "10%";
 
-    pBar.style.width = "40%";
-    const fileName = id + "_" + session.username + "_" + Date.now() + ".jpg";
-
-    // Upload via google.script.run — file goes directly through Google infrastructure
-    google.script.run
-      .withSuccessHandler(function(photoUrl) {
-        pBar.style.width = "100%";
-        setTimeout(() => { document.getElementById("uploadProgress").style.display = "none"; }, 500);
-        toast("✅ Status updated + Photo saved 📷", "ok");
-        closeStatusModal(); loadShipments();
-        btn.innerHTML = "<span>Update Status</span>"; btn.disabled = false;
-      })
-      .withFailureHandler(function(err) {
-        document.getElementById("uploadProgress").style.display = "none";
-        toast("✅ Status updated — photo failed: " + err.message, "in");
-        closeStatusModal(); loadShipments();
-        btn.innerHTML = "<span>Update Status</span>"; btn.disabled = false;
-      })
-      .uploadFile(b64, fileName, file.type || "image/jpeg",
-                  id, session.token, session.username);
-    // Return here — btn re-enable happens in success/failure handler above
+  let b64;
+  try {
+    b64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = ev => resolve(ev.target.result.split(",")[1]);
+      reader.onerror = () => reject(new Error("Could not read file"));
+      reader.readAsDataURL(file);
+    });
+  } catch(e) {
+    document.getElementById("uploadProgress").style.display = "none";
+    toast("❌ Could not read file: " + e.message, "er");
+    btn.innerHTML = "<span>📷 Upload Photo</span>"; btn.disabled = false; btn.style.opacity = "1";
     return;
   }
 
-  toast("✅ Status updated: " + status, "ok");
-  closeStatusModal(); loadShipments();
-  btn.innerHTML = "<span>Update Status</span>"; btn.disabled = false;
+  pBar.style.width = "40%";
+  const fileName = id + "_" + session.username + "_" + Date.now() + ".jpg";
+
+  try {
+    const res = await api(authPayload({
+      action:"uploadPhoto", base64Data:b64,
+      mimeType:file.type||"image/jpeg", fileName:fileName, shipmentId:id
+    }));
+    if (!res.success) throw new Error(res.message||"Upload failed");
+    pBar.style.width = "100%";
+    setTimeout(function(){ document.getElementById("uploadProgress").style.display="none"; }, 500);
+    toast("✅ Photo uploaded! 📷", "ok");
+    btn.innerHTML = "✅ Photo Saved"; btn.disabled = true;
+    document.getElementById("uploadPhotoHint").textContent = "Photo saved to Drive ✓";
+    loadShipments();
+    if (res.thumbUrl) showUploadPreview(res.thumbUrl, res.photoUrl, fileName);
+  } catch(e) {
+    document.getElementById("uploadProgress").style.display = "none";
+    toast("❌ Upload failed: " + e.message, "er");
+    btn.innerHTML = "<span>📷 Retry Upload</span>"; btn.disabled = false; btn.style.opacity = "1";
+  }
 }
 
 // ── PHOTO VIEWER ──────────────────────────────────────────────
