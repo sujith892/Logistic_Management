@@ -1387,11 +1387,8 @@ function closeUploadPreview() {
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDbN3ewtSK5Sc1em7BsRMNz1XGNlVaYWAVXpzUcG5xtDWcUl0vyVRnrwi5AeQnbUA/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3-GEN9GKklZUHKsr2ewhjUfvdgW8-sO7Y9pSikAFzYg0KsZwiSCXHxeZFZt764F6u/exec";
 
-//const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3-GEN9GKklZUHKsr2ewhjUfvdgW8-sO7Y9pSikAFzYg0KsZwiSCXHxeZFZt764F6u/exec";
-
-//https://script.google.com/macros/s/AKfycbzDbN3ewtSK5Sc1em7BsRMNz1XGNlVaYWAVXpzUcG5xtDWcUl0vyVRnrwi5AeQnbUA/exec
 // ── STATE ──────────────────────────────────────────────────────
 let session      = { username:"", token:"", role:"", driverName:"", email:"" };
 let allShips     = [];
@@ -1673,22 +1670,21 @@ let tableSortCol = "";
 let tableSortDir = 1;
 
 
-// ── CHECK IN / OUT ──────────────────────────────────────────────
 function renderCheckInBtn(s) {
   var checkedIn  = s.CheckInAt  && String(s.CheckInAt).trim()  !== "";
   var checkedOut = s.CheckOutAt && String(s.CheckOutAt).trim() !== "";
   var sid = esc(s.ID || "");
   if (!checkedIn) {
-    return "<button class=\"btn-checkin\" onclick=\"doCheckIn('" + sid + "','checkIn',this)\">\u2705 Check In</button>" +
+    return "<button class=\"btn-checkin\" onclick=\"doCheckIn('" + sid + "','checkIn',this)\">✅ Check In</button>" +
            "<div class=\"ci-stamp\" id=\"ci_" + sid + "\"></div>";
   }
   if (checkedIn && !checkedOut) {
-    return "<div class=\"ci-stamp\">\u2705 Checked in: <b>" + esc(s.CheckInAt) + "</b></div>" +
-           "<button class=\"btn-checkout\" onclick=\"doCheckIn('" + sid + "','checkOut',this)\">\uD83D\uDD34 Check Out</button>" +
+    return "<div class=\"ci-stamp\">✅ Checked in: <b>" + esc(s.CheckInAt) + "</b></div>" +
+           "<button class=\"btn-checkout\" onclick=\"doCheckIn('" + sid + "','checkOut',this)\">🔴 Check Out</button>" +
            "<div class=\"co-stamp\" id=\"co_" + sid + "\"></div>";
   }
-  return "<div class=\"ci-stamp\">\u2705 In: <b>" + esc(s.CheckInAt) + "</b></div>" +
-         "<div class=\"co-stamp\">\uD83D\uDD34 Out: <b>" + esc(s.CheckOutAt) + "</b></div>";
+  return "<div class=\"ci-stamp\">✅ In: <b>" + esc(s.CheckInAt) + "</b></div>" +
+         "<div class=\"co-stamp\">🔴 Out: <b>" + esc(s.CheckOutAt) + "</b></div>";
 }
 
 async function doCheckIn(shipmentId, actionType, btn) {
@@ -1698,18 +1694,18 @@ async function doCheckIn(shipmentId, actionType, btn) {
     var res = await api(authPayload({ action:"checkInOut", shipmentId:shipmentId, action_type:actionType }));
     if (!res.success) throw new Error(res.message);
     if (actionType === "checkIn") {
-      btn.className = "btn-checkin"; btn.innerHTML = "\u2705 Checked In"; btn.disabled = true;
+      btn.className = "btn-checkin"; btn.innerHTML = "✅ Checked In"; btn.disabled = true;
       var el = document.getElementById("ci_" + shipmentId);
-      if (el) el.innerHTML = "\u2705 Checked in: <b>" + res.timestamp + "</b>";
+      if (el) el.innerHTML = "✅ Checked in: <b>" + res.timestamp + "</b>";
     } else {
-      btn.className = "btn-checkout"; btn.innerHTML = "\uD83D\uDD34 Checked Out"; btn.disabled = true;
+      btn.className = "btn-checkout"; btn.innerHTML = "🔴 Checked Out"; btn.disabled = true;
       var el2 = document.getElementById("co_" + shipmentId);
-      if (el2) el2.innerHTML = "\uD83D\uDD34 Checked out: <b>" + res.timestamp + "</b>";
+      if (el2) el2.innerHTML = "🔴 Checked out: <b>" + res.timestamp + "</b>";
     }
-    toast("\u2705 " + (actionType === "checkIn" ? "Check In" : "Check Out") + " recorded!", "ok");
+    toast("✅ " + (actionType === "checkIn" ? "Check In" : "Check Out") + " recorded!", "ok");
     setTimeout(loadShipments, 1500);
   } catch(e) {
-    toast("\u274C Failed: " + e.message, "er");
+    toast("❌ Failed: " + e.message, "er");
     btn.innerHTML = orig; btn.disabled = false;
   }
 }
@@ -2144,6 +2140,30 @@ async function saveStatus() {
   btn.innerHTML = "<span>✔ Update Status</span>"; btn.disabled = false;
 }
 
+// Compress image to max 1200px wide, quality 0.75 before uploading
+function compressImage(file, maxPx, quality) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onerror = function() { reject(new Error("Could not read file")); };
+    reader.onload = function(e) {
+      var img = new Image();
+      img.onerror = function() { reject(new Error("Could not decode image")); };
+      img.onload = function() {
+        var w = img.width, h = img.height;
+        if (w > maxPx) { h = Math.round(h * maxPx / w); w = maxPx; }
+        if (h > maxPx) { w = Math.round(w * maxPx / h); h = maxPx; }
+        var canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        var dataUrl = canvas.toDataURL("image/jpeg", quality);
+        resolve(dataUrl.split(",")[1]); // return pure base64
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 async function uploadPhotoOnly() {
   const file = window._selectedPhotoFile;
   if (!file) { toast("⚠ Select a photo first", "er"); return; }
@@ -2156,17 +2176,14 @@ async function uploadPhotoOnly() {
   const pBar = document.getElementById("uploadProgressBar");
   pBar.style.width = "10%";
 
+  // Compress to max 1200px, 75% quality — keeps file under ~300KB
   let b64;
   try {
-    b64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload  = ev => resolve(ev.target.result.split(",")[1]);
-      reader.onerror = () => reject(new Error("Could not read file"));
-      reader.readAsDataURL(file);
-    });
+    pBar.style.width = "25%";
+    b64 = await compressImage(file, 1200, 0.75);
   } catch(e) {
     document.getElementById("uploadProgress").style.display = "none";
-    toast("❌ Could not read file: " + e.message, "er");
+    toast("❌ Could not process image: " + e.message, "er");
     btn.innerHTML = "<span>📷 Upload Photo</span>"; btn.disabled = false; btn.style.opacity = "1";
     return;
   }
@@ -2177,7 +2194,7 @@ async function uploadPhotoOnly() {
   try {
     const res = await api(authPayload({
       action:"uploadPhoto", base64Data:b64,
-      mimeType:file.type||"image/jpeg", fileName:fileName, shipmentId:id
+      mimeType:"image/jpeg", fileName:fileName, shipmentId:id
     }));
     if (!res.success) throw new Error(res.message||"Upload failed");
     pBar.style.width = "100%";
