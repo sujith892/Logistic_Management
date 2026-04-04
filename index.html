@@ -815,14 +815,12 @@ body.admin-mode #toast {
   background:linear-gradient(135deg,#007a3d,#00cc66);color:#fff;
   font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;
   letter-spacing:.5px;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;}
-.btn-checkin:active{transform:scale(.97);}
-.btn-checkin:disabled{opacity:.55;cursor:not-allowed;}
+.btn-checkin:active{transform:scale(.97);}.btn-checkin:disabled{opacity:.55;cursor:not-allowed;}
 .btn-checkout{width:100%;padding:10px 0;border:none;border-radius:10px;
   background:linear-gradient(135deg,#b33000,#ff5500);color:#fff;
   font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;
   letter-spacing:.5px;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;}
-.btn-checkout:active{transform:scale(.97);}
-.btn-checkout:disabled{opacity:.55;cursor:not-allowed;}
+.btn-checkout:active{transform:scale(.97);}.btn-checkout:disabled{opacity:.55;cursor:not-allowed;}
 .ci-stamp{font-size:11px;color:var(--muted);text-align:center;padding:3px 0;letter-spacing:.3px;}
 .ci-stamp b{color:var(--green);}
 .co-stamp{font-size:11px;color:var(--muted);text-align:center;padding:3px 0;letter-spacing:.3px;}
@@ -1230,26 +1228,48 @@ body.admin-mode #toast {
 
     <!-- PHOTO UPLOAD -->
     <div class="field" style="margin-top:12px">
-      <label>📷 Upload Photo <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
-      <div class="photo-upload-area" id="photoDropZone"
-           ondragover="photoDrag(event,true)" ondragleave="photoDrag(event,false)" ondrop="photoDrop(event)">
-        <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="photoSelected(this)"/>
-        <div class="photo-upload-ico">📸</div>
-        <div class="photo-upload-txt">Tap to take photo or <strong>choose from gallery</strong></div>
+      <label>📷 Photo <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(optional — auto-uploads on select)</span></label>
+
+      <!-- Hidden file inputs -->
+      <input type="file" id="photoInputCamera"  accept="image/*" capture="environment" style="display:none" onchange="photoChosen(this)"/>
+      <input type="file" id="photoInputGallery" accept="image/*" style="display:none" onchange="photoChosen(this)"/>
+
+      <!-- Source picker — shown when no photo selected -->
+      <div id="photoSourcePicker" style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn" onclick="document.getElementById('photoInputCamera').click()"
+                style="flex:1;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.25);
+                       color:var(--accent);font-size:13px;padding:12px 0;border-radius:10px;
+                       display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer">
+          📷 Camera
+        </button>
+        <button class="btn" onclick="document.getElementById('photoInputGallery').click()"
+                style="flex:1;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.25);
+                       color:var(--accent);font-size:13px;padding:12px 0;border-radius:10px;
+                       display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer">
+          🖼 Gallery
+        </button>
       </div>
-      <div class="photo-preview" id="photoPreview">
-        <div id="photoPreviewThumb" onclick="showPhotoPreview()"
-             style="display:none;padding:11px 14px;cursor:pointer;font-size:13px;
-                    font-weight:600;color:var(--accent);letter-spacing:0.3px;
-                    align-items:center;gap:8px;">
-          <span>👁</span><span id="photoPreviewLabel"></span>
+
+      <!-- Photo preview — shown after selection -->
+      <div id="photoPreviewBox" style="display:none;margin-top:8px;border-radius:10px;overflow:hidden;
+           border:1px solid rgba(0,212,255,.2);position:relative">
+        <img id="photoPreviewImg" src="" alt="preview"
+             style="width:100%;max-height:180px;object-fit:cover;display:block"/>
+        <div id="photoUploadOverlay" style="position:absolute;inset:0;background:rgba(6,13,20,.75);
+             display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+          <div id="photoUploadStatus" style="color:#00d4ff;font-size:13px;font-weight:600">⏳ Uploading…</div>
+          <div style="width:70%;background:rgba(255,255,255,.15);border-radius:999px;height:5px;overflow:hidden">
+            <div id="photoUploadBar" style="height:100%;background:#00d4ff;width:0%;transition:width .3s;border-radius:999px"></div>
+          </div>
         </div>
-        <img id="photoPreviewImg" src="" alt="preview" style="display:none;"/>
-        <button class="photo-preview-remove" onclick="removePhoto()">✕</button>
+        <button onclick="removePhoto()"
+                style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);border:none;
+                       color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:13px;
+                       display:flex;align-items:center;justify-content:center">✕</button>
       </div>
-      <div class="upload-progress" id="uploadProgress">
-        <div class="upload-progress-bar" id="uploadProgressBar"></div>
-      </div>
+
+      <!-- Status text below preview -->
+      <div id="photoStatusText" style="font-size:11px;color:var(--muted);text-align:center;margin-top:5px"></div>
     </div>
 
     <div style="display:flex;gap:8px;margin-top:14px">
@@ -1257,15 +1277,6 @@ body.admin-mode #toast {
       <button class="btn btn-primary" style="flex:2" id="saveStatusBtn" onclick="saveStatus()">
         <span>✔ Update Status</span>
       </button>
-    </div>
-    <div style="margin-top:8px">
-      <button class="btn btn-primary" id="uploadPhotoBtn" onclick="uploadPhotoOnly()"
-              style="width:100%;background:linear-gradient(135deg,#005fa3,#00b8d9);opacity:.45;cursor:not-allowed" disabled>
-        <span>📷 Upload Photo</span>
-      </button>
-      <div id="uploadPhotoHint" style="font-size:11px;color:var(--muted);text-align:center;margin-top:5px">
-        Save status first, then upload photo
-      </div>
     </div>
   </div>
 </div>
@@ -1387,7 +1398,7 @@ function closeUploadPreview() {
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3-GEN9GKklZUHKsr2ewhjUfvdgW8-sO7Y9pSikAFzYg0KsZwiSCXHxeZFZt764F6u/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw9RfMo9k4eLYApoK6ht3gVdH6fMRJWrF5G1MFqHe-bNwHpEn2n_nmTEkR2bNA-NhPF/exec";
 
 // ── STATE ──────────────────────────────────────────────────────
 let session      = { username:"", token:"", role:"", driverName:"", email:"" };
@@ -1674,19 +1685,12 @@ function renderCheckInBtn(s) {
   var checkedIn  = s.CheckInAt  && String(s.CheckInAt).trim()  !== "";
   var checkedOut = s.CheckOutAt && String(s.CheckOutAt).trim() !== "";
   var sid = esc(s.ID || "");
-  if (!checkedIn) {
-    return "<button class=\"btn-checkin\" onclick=\"doCheckIn('" + sid + "','checkIn',this)\">✅ Check In</button>" +
-           "<div class=\"ci-stamp\" id=\"ci_" + sid + "\"></div>";
-  }
-  if (checkedIn && !checkedOut) {
-    return "<div class=\"ci-stamp\">✅ Checked in: <b>" + esc(s.CheckInAt) + "</b></div>" +
-           "<button class=\"btn-checkout\" onclick=\"doCheckIn('" + sid + "','checkOut',this)\">🔴 Check Out</button>" +
-           "<div class=\"co-stamp\" id=\"co_" + sid + "\"></div>";
-  }
-  return "<div class=\"ci-stamp\">✅ In: <b>" + esc(s.CheckInAt) + "</b></div>" +
-         "<div class=\"co-stamp\">🔴 Out: <b>" + esc(s.CheckOutAt) + "</b></div>";
+  if (!checkedIn)
+    return "<button class=\"btn-checkin\" onclick=\"doCheckIn('" + sid + "','checkIn',this)\">✅ Check In</button><div class=\"ci-stamp\" id=\"ci_" + sid + "\"></div>";
+  if (checkedIn && !checkedOut)
+    return "<div class=\"ci-stamp\">✅ Checked in: <b>" + esc(s.CheckInAt) + "</b></div><button class=\"btn-checkout\" onclick=\"doCheckIn('" + sid + "','checkOut',this)\">🔴 Check Out</button><div class=\"co-stamp\" id=\"co_" + sid + "\"></div>";
+  return "<div class=\"ci-stamp\">✅ In: <b>" + esc(s.CheckInAt) + "</b></div><div class=\"co-stamp\">🔴 Out: <b>" + esc(s.CheckOutAt) + "</b></div>";
 }
-
 async function doCheckIn(shipmentId, actionType, btn) {
   var orig = btn.innerHTML;
   btn.innerHTML = '<span class="spin"></span>'; btn.disabled = true;
@@ -2035,89 +2039,129 @@ function openStatus(s) {
   sSt.value = s.Status || "";
   applyStatusColor(sSt);
   removePhoto();
-  const upBtn = document.getElementById("uploadPhotoBtn");
-  upBtn.disabled = true; upBtn.style.opacity = ".45"; upBtn.style.cursor = "not-allowed";
-  upBtn.innerHTML = "<span>📷 Upload Photo</span>";
-  upBtn.dataset.shipmentId = s.ID;
-  document.getElementById("uploadPhotoHint").textContent = "Save status first, then upload photo";
+  window._currentShipmentId = s.ID;
   document.getElementById("statusOverlay").classList.add("open");
 }
 
 function closeStatusModal() { closeOverlay("statusOverlay"); removePhoto(); }
 
-function photoSelected(input) {
+// ── PHOTO: choose source, auto-upload on select ───────────────
+function photoChosen(input) {
   if (!input.files || !input.files[0]) return;
   const file = input.files[0];
-  // No size limit — file goes via google.script.run, not fetch
   const allowed = ["image/jpeg","image/jpg","image/png","image/gif","image/webp",
                    "image/heic","image/heif","image/bmp"];
   if (file.type && !allowed.includes(file.type.toLowerCase())) {
     toast("⚠ Only image files allowed","er"); input.value = ""; return;
   }
-  // Store file reference — no FileReader yet (lazy preview on tap)
+
+  // Store reference and show preview immediately
+  window._selectedPhotoFile = file;
   selectedPhotoBase64 = null;
   selectedPhotoMime   = file.type || "image/jpeg";
-  window._selectedPhotoFile = file;
 
-  document.getElementById("photoPreview").style.display = "block";
-  document.getElementById("photoPreviewImg").style.display = "none";
-  document.getElementById("photoPreviewImg").src = "";
-  const thumb = document.getElementById("photoPreviewThumb");
-  thumb.style.display = "flex";
-  document.getElementById("photoPreviewLabel").textContent =
-    "Tap to preview · " + file.name + " (" + (file.size/1024/1024).toFixed(1) + " MB)";
-  document.querySelector(".photo-upload-area .photo-upload-ico").textContent = "✅";
-  document.querySelector(".photo-upload-area .photo-upload-txt").innerHTML =
-    `<strong>${esc(file.name)}</strong> <span style="color:var(--muted);font-size:11px">(${(file.size/1024/1024).toFixed(1)} MB)</span>`;
-}
+  // Show preview box, hide picker
+  document.getElementById("photoSourcePicker").style.display = "none";
+  const box = document.getElementById("photoPreviewBox");
+  box.style.display = "block";
 
-// Lazy preview — only loads when driver explicitly taps
-function showPhotoPreview() {
-  const file = window._selectedPhotoFile;
-  if (!file) return;
-  document.getElementById("photoPreviewLabel").textContent = "⏳ Loading…";
-  const reader = new FileReader();
+  // Show image preview
+  var reader = new FileReader();
   reader.onload = function(ev) {
-    selectedPhotoBase64 = ev.target.result.split(",")[1];
-    const img = document.getElementById("photoPreviewImg");
-    img.src = ev.target.result;
-    img.style.display = "block";
-    document.getElementById("photoPreviewThumb").style.display = "none";
-  };
-  reader.onerror = () => {
-    document.getElementById("photoPreviewLabel").textContent = "Preview not available for this file type";
+    document.getElementById("photoPreviewImg").src = ev.target.result;
   };
   reader.readAsDataURL(file);
-}
 
-function photoDrag(e, over) {
-  e.preventDefault();
-  document.getElementById("photoDropZone").classList.toggle("drag", over);
-}
-function photoDrop(e) {
-  e.preventDefault();
-  document.getElementById("photoDropZone").classList.remove("drag");
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith("image/")) {
-    const dt = new DataTransfer(); dt.items.add(file);
-    const inp = document.getElementById("photoInput");
-    inp.files = dt.files; photoSelected(inp);
+  // Auto-upload if status already saved (shipmentId available)
+  var sid = window._currentShipmentId || document.getElementById("s-ID").value;
+  if (sid) {
+    autoUploadPhoto(file, sid);
+  } else {
+    // Status not saved yet — show waiting message
+    document.getElementById("photoUploadOverlay").style.display = "none";
+    document.getElementById("photoStatusText").textContent = "📎 Photo ready — save status to upload";
   }
 }
 
+async function autoUploadPhoto(file, shipmentId) {
+  var overlay   = document.getElementById("photoUploadOverlay");
+  var statusTxt = document.getElementById("photoUploadStatus");
+  var bar       = document.getElementById("photoUploadBar");
+  var statusEl  = document.getElementById("photoStatusText");
+
+  overlay.style.display = "flex";
+  statusTxt.textContent = "⏳ Compressing…";
+  bar.style.width = "15%";
+
+  var b64;
+  try {
+    b64 = await compressImage(file, 1200, 0.75);
+  } catch(e) {
+    overlay.style.display = "none";
+    statusEl.textContent = "❌ Could not process image";
+    toast("❌ Image error: " + e.message, "er");
+    return;
+  }
+
+  statusTxt.textContent = "⏳ Uploading…";
+  bar.style.width = "45%";
+
+  var fileName = shipmentId + "_" + session.username + "_" + Date.now() + ".jpg";
+  try {
+    var res = await api(authPayload({
+      action:"uploadPhoto", base64Data:b64,
+      mimeType:"image/jpeg", fileName:fileName, shipmentId:shipmentId
+    }));
+    if (!res.success) throw new Error(res.message || "Upload failed");
+
+    bar.style.width = "100%";
+    statusTxt.textContent = "✅ Saved!";
+    statusTxt.style.color = "#00ff88";
+    setTimeout(function(){ overlay.style.display = "none"; }, 1000);
+    statusEl.textContent = "✅ Photo saved to Drive";
+    statusEl.style.color = "var(--green)";
+    window._photoUploaded = true;
+    loadShipments();
+    if (res.thumbUrl) showUploadPreview(res.thumbUrl, res.photoUrl, fileName);
+  } catch(e) {
+    bar.style.width = "0%";
+    statusTxt.textContent = "❌ Failed";
+    statusTxt.style.color = "var(--red)";
+    setTimeout(function(){ overlay.style.display = "none"; }, 800);
+    statusEl.textContent = "❌ Upload failed: " + e.message;
+    statusEl.style.color = "var(--red)";
+    toast("❌ Photo upload failed: " + e.message, "er");
+  }
+}
+
+// Keep showPhotoPreview as no-op (no longer used but may be called)
+function showPhotoPreview() {}
+function photoDrag(e, over) { e.preventDefault(); }
+function photoDrop(e) { e.preventDefault(); }
+
 function removePhoto() {
   selectedPhotoBase64 = null; selectedPhotoMime = null;
-  window._selectedPhotoFile = null;
-  document.getElementById("photoInput").value = "";
-  document.getElementById("photoPreview").style.display = "none";
-  document.getElementById("photoPreviewImg").src = "";
-  document.getElementById("photoPreviewImg").style.display = "none";
-  document.getElementById("photoPreviewThumb").style.display = "none";
-  document.querySelector(".photo-upload-area .photo-upload-ico").textContent = "📸";
-  document.querySelector(".photo-upload-area .photo-upload-txt").innerHTML =
-    `Tap to take photo or <strong>choose from gallery</strong>`;
-  document.getElementById("uploadProgress").style.display = "none";
-  document.getElementById("uploadProgressBar").style.width = "0%";
+  window._selectedPhotoFile = null; window._photoUploaded = false;
+  // Reset camera/gallery inputs
+  var ci = document.getElementById("photoInputCamera");
+  var gi = document.getElementById("photoInputGallery");
+  if (ci) ci.value = ""; if (gi) gi.value = "";
+  // Reset new photo UI
+  var box = document.getElementById("photoPreviewBox");
+  if (box) box.style.display = "none";
+  var picker = document.getElementById("photoSourcePicker");
+  if (picker) picker.style.display = "flex";
+  var st = document.getElementById("photoStatusText");
+  if (st) { st.textContent = ""; st.style.color = ""; }
+  var bar = document.getElementById("photoUploadBar");
+  if (bar) bar.style.width = "0%";
+  var overlay = document.getElementById("photoUploadOverlay");
+  if (overlay) overlay.style.display = "flex";
+  var statusTxt = document.getElementById("photoUploadStatus");
+  if (statusTxt) { statusTxt.textContent = "⏳ Uploading…"; statusTxt.style.color = "#00d4ff"; }
+  // Safe reset of preview image (may not exist)
+  var prevImg = document.getElementById("photoPreviewImg");
+  if (prevImg) { prevImg.src = ""; prevImg.style.display = "none"; }
 }
 
 async function saveStatus() {
@@ -2131,16 +2175,17 @@ async function saveStatus() {
     if (!res.success) throw new Error(res.message);
     toast("✅ Status saved: " + status, "ok");
     loadShipments();
-    const upBtn = document.getElementById("uploadPhotoBtn");
-    upBtn.disabled = false; upBtn.style.opacity = "1"; upBtn.style.cursor = "pointer";
-    upBtn.dataset.shipmentId = id;
-    document.getElementById("uploadPhotoHint").textContent =
-      window._selectedPhotoFile ? "Photo ready — tap Upload Photo" : "Select a photo, then tap Upload Photo";
+    window._currentShipmentId = id;
+    // If photo already selected but not yet uploaded, start auto-upload now
+    if (window._selectedPhotoFile && !window._photoUploaded) {
+      autoUploadPhoto(window._selectedPhotoFile, id);
+    }
+    var st = document.getElementById("photoStatusText");
+    if (st && !window._selectedPhotoFile) st.textContent = "";
   } catch(e) { toast("❌ " + e.message, "er"); }
   btn.innerHTML = "<span>✔ Update Status</span>"; btn.disabled = false;
 }
 
-// Compress image to max 1200px wide, quality 0.75 before uploading
 function compressImage(file, maxPx, quality) {
   return new Promise(function(resolve, reject) {
     var reader = new FileReader();
@@ -2155,8 +2200,7 @@ function compressImage(file, maxPx, quality) {
         var canvas = document.createElement("canvas");
         canvas.width = w; canvas.height = h;
         canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-        var dataUrl = canvas.toDataURL("image/jpeg", quality);
-        resolve(dataUrl.split(",")[1]); // return pure base64
+        resolve(canvas.toDataURL("image/jpeg", quality).split(",")[1]);
       };
       img.src = e.target.result;
     };
@@ -2165,50 +2209,11 @@ function compressImage(file, maxPx, quality) {
 }
 
 async function uploadPhotoOnly() {
-  const file = window._selectedPhotoFile;
+  var file = window._selectedPhotoFile;
   if (!file) { toast("⚠ Select a photo first", "er"); return; }
-  const btn = document.getElementById("uploadPhotoBtn");
-  const id  = btn.dataset.shipmentId || document.getElementById("s-ID").value;
-  if (!id)  { toast("⚠ Save status first", "er"); return; }
-
-  btn.innerHTML = '<span class="spin"></span>'; btn.disabled = true;
-  document.getElementById("uploadProgress").style.display = "block";
-  const pBar = document.getElementById("uploadProgressBar");
-  pBar.style.width = "10%";
-
-  // Compress to max 1200px, 75% quality — keeps file under ~300KB
-  let b64;
-  try {
-    pBar.style.width = "25%";
-    b64 = await compressImage(file, 1200, 0.75);
-  } catch(e) {
-    document.getElementById("uploadProgress").style.display = "none";
-    toast("❌ Could not process image: " + e.message, "er");
-    btn.innerHTML = "<span>📷 Upload Photo</span>"; btn.disabled = false; btn.style.opacity = "1";
-    return;
-  }
-
-  pBar.style.width = "40%";
-  const fileName = id + "_" + session.username + "_" + Date.now() + ".jpg";
-
-  try {
-    const res = await api(authPayload({
-      action:"uploadPhoto", base64Data:b64,
-      mimeType:"image/jpeg", fileName:fileName, shipmentId:id
-    }));
-    if (!res.success) throw new Error(res.message||"Upload failed");
-    pBar.style.width = "100%";
-    setTimeout(function(){ document.getElementById("uploadProgress").style.display="none"; }, 500);
-    toast("✅ Photo uploaded! 📷", "ok");
-    btn.innerHTML = "✅ Photo Saved"; btn.disabled = true;
-    document.getElementById("uploadPhotoHint").textContent = "Photo saved to Drive ✓";
-    loadShipments();
-    if (res.thumbUrl) showUploadPreview(res.thumbUrl, res.photoUrl, fileName);
-  } catch(e) {
-    document.getElementById("uploadProgress").style.display = "none";
-    toast("❌ Upload failed: " + e.message, "er");
-    btn.innerHTML = "<span>📷 Retry Upload</span>"; btn.disabled = false; btn.style.opacity = "1";
-  }
+  var id = window._currentShipmentId || document.getElementById("s-ID").value;
+  if (!id) { toast("⚠ Save status first", "er"); return; }
+  await autoUploadPhoto(file, id);
 }
 
 // ── PHOTO VIEWER ──────────────────────────────────────────────
