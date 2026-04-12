@@ -1019,7 +1019,7 @@ body.admin-mode #toast {
         </div>
       </div>
       <div class="field"><label>Pickup Location</label>
-        <input type="text" id="c-pickup" placeholder="Pickup address or location"/>
+        <select id="c-pickup"><option value="">— Select Location —</option></select>
       </div>
       <div class="field"><label>Notes</label>
         <textarea id="c-notes" placeholder="Any additional notes…" style="resize:none;height:70px;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;line-height:1.5"></textarea>
@@ -1237,7 +1237,7 @@ body.admin-mode #toast {
       </div>
     </div>
     <div class="field"><label>Pickup Location</label>
-      <input type="text" id="e-PickupLocation" placeholder="Pickup address or location"/>
+      <select id="e-PickupLocation"><option value="">— Select Location —</option></select>
     </div>
     <div class="field"><label>Notes</label>
       <textarea id="e-Notes" placeholder="Any additional notes…" style="resize:none;height:70px;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;line-height:1.5"></textarea>
@@ -1425,6 +1425,10 @@ body.admin-mode #toast {
               style="flex:1;padding:8px 0;border-radius:8px;border:1px solid var(--border);
                      background:transparent;color:var(--muted);font-family:var(--font);
                      font-size:12px;font-weight:700;cursor:pointer">🚚 Service</button>
+      <button id="emTab-location" onclick="emSwitchTab('location')"
+              style="flex:1;padding:8px 0;border-radius:8px;border:1px solid var(--border);
+                     background:transparent;color:var(--muted);font-family:var(--font);
+                     font-size:12px;font-weight:700;cursor:pointer">📍 Location</button>
     </div>
 
     <!-- List -->
@@ -1586,7 +1590,7 @@ function closeUploadPreview() {
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNbO3l6ueM3Y0c-80Saqt6HGQtkg-53XkpodBsl5zfU-GAGxt_oMcea4W4g8Dc59iX/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyR5jY7m1VYPifEKoQnczTozaJ5adwqcJ4msjB-h-J1ZrLD0q2h_3HXK2cBRRRw2guQ/exec";
 
 // ── STATE ──────────────────────────────────────────────────────
 let session      = { username:"", token:"", role:"", driverName:"", email:"" };
@@ -1602,7 +1606,7 @@ function authPayload(extra) {
 // ── INIT ───────────────────────────────────────────────────────
 window.addEventListener("DOMContentLoaded", () => {
   updateClock(); setInterval(updateClock, 1000);
-  document.getElementById("c-date").value = new Date().toISOString().split("T")[0];
+  document.getElementById("c-date").value = todayISO();
 
   // [FIX: session persistence] Restore session from sessionStorage on page load
   const saved = sessionStorage.getItem("lt_session");
@@ -1786,6 +1790,12 @@ async function loadDropdowns() {
       res.drivers.map(d=>`<option value="${esc(d.value)}">${esc(d.label)} (@${esc(d.value)})</option>`).join("");
     document.getElementById("c-assigned").innerHTML = driverOpts;
     document.getElementById("e-Assigned").innerHTML = driverOpts;
+    const pickupOpts = `<option value="">— Select Location —</option>` +
+      (res.pickupLocations||[]).map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join("");
+    var cpick = document.getElementById("c-pickup");
+    if (cpick) cpick.innerHTML = pickupOpts;
+    var epick = document.getElementById("e-PickupLocation");
+    if (epick) epick.innerHTML = pickupOpts;
   } catch(e) { console.error("Dropdown load failed:", e); }
 }
 
@@ -1964,7 +1974,7 @@ function renderShipments(ships) {
           ${s.Commodity  ?`<span class="chip orange">📦 ${esc(s.Commodity)}</span>`:""}
           ${s.Boxes      ?`<span class="chip muted">🗃 ${esc(s.Boxes)} boxes</span>`:""}
           ${s.Assigned   ?`<span class="chip muted">👤 ${esc(s.Assigned)}</span>`:""}
-          ${s.Date       ?`<span class="chip muted">📅 ${esc(s.Date)}</span>`:""}
+          ${s.Date       ?`<span class="chip muted">📅 ${fmtDate(s.Date)}</span>`:""}
           ${s.UpdatedAt  ?`<span class="chip muted">🕐 ${esc(fmtUpdated(s.UpdatedAt))}</span>`:""}
         </div>
         ${s.PickupLocation?`<div style="margin:4px 0;padding:8px 12px;background:rgba(0,212,255,0.05);border-left:3px solid rgba(0,212,255,0.4);border-radius:0 8px 8px 0;font-size:12px"><span style="color:var(--accent);font-weight:600">📍 Pickup:</span> <span style="color:var(--muted)">${esc(s.PickupLocation)}</span></div>`:""}
@@ -2038,7 +2048,7 @@ function renderShipments(ships) {
       <td>${esc(s.ServiceType||"—")}</td>
       <td>${esc(s.Commodity||"—")}</td>
       <td class="td-num">${esc(s.Boxes||"—")}</td>
-      <td class="td-date">${esc(s.Date||"—")}</td>
+      <td class="td-date">${fmtDate(s.Date||"")}</td>
       <td class="td-assigned">${s.Assigned?`👤 ${esc(s.Assigned)}`:"—"}</td>
       <td class="td-status"><span class="status-badge ${sb}">${esc(s.Status||"—")}</span></td>
       <td class="td-date td-updated">${fmtUpdated(s.UpdatedAt)}</td>
@@ -2078,8 +2088,40 @@ function fmtUpdated(val) {
     const isToday = d.getDate()===now.getDate()&&d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
     const hhmm = d.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:false});
     if (isToday) return "Today "+hhmm;
-    return d.toLocaleDateString("en-IN",{day:"2-digit",month:"short"})+" "+hhmm;
+    // Use numeric day/month — no month words
+    const dd = String(d.getDate()).padStart(2,"0");
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    return dd+"/"+mm+" "+hhmm;
   } catch(e) { return String(val); }
+}
+
+// Parse date-only string (YYYY-MM-DD) in local time to avoid UTC day-shift
+function parseDateLocal(raw) {
+  if (!raw) return null;
+  var s = String(raw).trim();
+  // Pure date YYYY-MM-DD — parse as local midnight to avoid timezone shift
+  var m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  return new Date(s); // ISO with time — use as-is
+}
+
+// Format date field for display — avoids UTC day-shift
+function fmtDate(raw) {
+  if (!raw) return String(raw||"");
+  var s = String(raw).trim();
+  // If already dd-mm-yyyy or dd/mm/yyyy — show as-is
+  if (/^\d{2}[-\/]\d{2}[-\/]\d{4}$/.test(s)) return s;
+  // If YYYY-MM-DD — parse local and reformat
+  var m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return m[3]+"/"+m[2]+"/"+m[1];
+  // ISO with time — extract date portion locally
+  var d = new Date(s);
+  if (!isNaN(d)) {
+    var dd = String(d.getDate()).padStart(2,"0");
+    var mo = String(d.getMonth()+1).padStart(2,"0");
+    return dd+"/"+mo+"/"+d.getFullYear();
+  }
+  return s;
 }
 
 function filterShipments() { renderShipments(allShips); }
@@ -2088,20 +2130,31 @@ function setEntity(name) { activeEntity = name; renderShipments(allShips); }
 // ── DATE FILTER ────────────────────────────────────────────────
 // Returns the ISO date string (YYYY-MM-DD) for today
 function todayISO() {
-  return new Date().toISOString().split("T")[0];
+  var d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 }
 
-// Filter an array of shipments by activeDateFilter
-// Matches on the shipment's Date field (col G in the sheet)
+// Normalize any date string to YYYY-MM-DD for comparison
+function normDateStr(raw) {
+  if (!raw) return "";
+  var s = String(raw).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  var m = s.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/);
+  if (m) return m[3]+"-"+m[2]+"-"+m[1];
+  var t = s.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+  if (t) return t[1]+"-"+t[2]+"-"+t[3];
+  return "";
+}
+
+// Filter shipments by activeDateFilter
 function applyDateFilter(ships) {
   if (activeDateFilter === "all") return ships;
-  const target = activeDateFilter === "today" ? todayISO() : activeDateFilter;
+  const target = activeDateFilter === "today" ? todayISO() : normDateStr(activeDateFilter);
+  if (!target) return ships;
   return ships.filter(s => {
     const raw = s.Date || s.date || "";
     if (!raw) return false;
-    try {
-      return new Date(raw).toISOString().split("T")[0] === target;
-    } catch(e) { return false; }
+    return normDateStr(String(raw)) === target;
   });
 }
 
@@ -2179,7 +2232,7 @@ async function createShipment() {
       cSt.value = ""; cSt.classList.remove("green","yellow","red");
       document.getElementById("c-commodity").value = "";
       document.getElementById("c-boxes").value    = "";
-      document.getElementById("c-date").value     = new Date().toISOString().split("T")[0];
+      document.getElementById("c-date").value     = todayISO();
       var pu = document.getElementById("c-pickup"); if(pu) pu.value="";
       var nt = document.getElementById("c-notes");  if(nt) nt.value="";
       loadShipments(); showTab("shipments");
@@ -2198,7 +2251,7 @@ function openEdit(s) {
     const el=document.getElementById("e-"+f); if(el) el.value=s[f]||"";
   });
   const dateEl=document.getElementById("e-Date");
-  if(dateEl){ try{ dateEl.value=s.Date?new Date(s.Date).toISOString().split("T")[0]:""; }catch(e){ dateEl.value=""; } }
+  if(dateEl){ dateEl.value = normDateStr(s.Date||""); }
   const eSt=document.getElementById("e-Status");
   if(eSt){ eSt.value=s.Status||""; applyStatusColor(eSt); }
   var ePu=document.getElementById("e-PickupLocation"); if(ePu) ePu.value=s.PickupLocation||"";
@@ -2622,16 +2675,17 @@ async function cfgSave() {
 // ── DROPDOWN MANAGER (Entity / Account / Service) ─────────────
 var _emList    = [];
 var _emTab     = "entity"; // current tab
-var _emIcon    = { entity:"🏢", account:"🏦", service:"🚚" };
-var _emLabel   = { entity:"entity name", account:"account name", service:"service type" };
+var _emIcon    = { entity:"🏢", account:"🏦", service:"🚚", location:"📍" };
+var _emLabel   = { entity:"entity name", account:"account name", service:"service type", location:"pickup location" };
 
 function openEntityManager() {
   _emTab = "entity";
   // Always fetch fresh so all three tabs are populated
   api(authPayload({ action:"getDropdowns" })).then(function(res) {
-    _cfg.entity  = res.entities     ? [...res.entities]    : [];
-    _cfg.account = res.accountNames ? [...res.accountNames]: [];
-    _cfg.service = res.serviceTypes ? [...res.serviceTypes]: [];
+    _cfg.entity   = res.entities        ? [...res.entities]        : [];
+    _cfg.account  = res.accountNames   ? [...res.accountNames]   : [];
+    _cfg.service  = res.serviceTypes   ? [...res.serviceTypes]   : [];
+    _cfg.location = res.pickupLocations? [...res.pickupLocations]: [];
     _emList = [..._cfg.entity];
     emRefresh();
     document.getElementById("entityManagerOverlay").classList.add("open");
@@ -2650,7 +2704,7 @@ function emSwitchTab(tab) {
 
 function emRefresh() {
   // Update tab button styles
-  ["entity","account","service"].forEach(function(t) {
+  ["entity","account","service","location"].forEach(function(t) {
     var btn = document.getElementById("emTab-" + t);
     if (!btn) return;
     var active = t === _emTab;
@@ -2724,11 +2778,12 @@ async function emSave() {
   showLoading("Saving dropdowns…");
   try {
     var res = await api(authPayload({
-      action:       "saveConfig",
-      entities:     _cfg.entity  || [],
-      accountNames: _cfg.account || [],
-      serviceTypes: _cfg.service || [],
-      statusValues: _cfg.status  || [],
+      action:          "saveConfig",
+      entities:        _cfg.entity   || [],
+      accountNames:    _cfg.account  || [],
+      serviceTypes:    _cfg.service  || [],
+      pickupLocations: _cfg.location || [],
+      statusValues:    _cfg.status   || [],
     }));
     if (!res.success) throw new Error(res.message);
     toast("✅ Saved!", "ok");
@@ -2863,7 +2918,7 @@ function updateActiveDateInfo() {
     return;
   }
   const dates = allShips.map(s => {
-    try { return new Date(s.Date).toISOString().split("T")[0]; } catch(e) { return null; }
+    return normDateStr(s.Date||"") || null;
   }).filter(Boolean).sort();
 
   const oldest  = dates[0]              || "—";
@@ -2879,7 +2934,7 @@ function arcPreview() {
 
   // Count locally from allShips (already loaded in memory)
   const matching = allShips.filter(s => {
-    try { return new Date(s.Date).toISOString().split("T")[0] <= cutoff; } catch(e) { return false; }
+    var nd = normDateStr(s.Date||""); return nd ? nd <= cutoff : false;
   });
 
   arcPreviewRowCount = matching.length;
@@ -3032,7 +3087,7 @@ function parseBulkFile(file) {
         if (row.Date) {
           try {
             const d = new Date(row.Date);
-            if (!isNaN(d)) row.Date = d.toISOString().split("T")[0];
+            if (!isNaN(d)) { row.Date = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
           } catch(e) {}
         }
         row._rowNum = i + 2; // Excel row number (1=header)
@@ -3161,8 +3216,8 @@ function initHistory() {
   // Set default date range: last 30 days
   const today = new Date();
   const ago30 = new Date(today); ago30.setDate(ago30.getDate() - 30);
-  document.getElementById("h-to").value   = today.toISOString().split("T")[0];
-  document.getElementById("h-from").value = ago30.toISOString().split("T")[0];
+  document.getElementById("h-to").value   = todayISO();
+  var a=ago30; document.getElementById("h-from").value = a.getFullYear()+"-"+String(a.getMonth()+1).padStart(2,"0")+"-"+String(a.getDate()).padStart(2,"0");
 
   // Populate entity filter from loaded shipments
   const entities = [...new Set(allShips.map(s=>s.Entity).filter(Boolean))].sort();
@@ -3233,7 +3288,7 @@ function renderHistoryResults(records, from, to) {
     let d = "";
     try {
       const raw = r.Date || r.CreatedAt || "";
-      d = raw ? new Date(raw).toISOString().split("T")[0] : "Unknown Date";
+      d = raw ? (normDateStr(raw) || "Unknown Date") : "Unknown Date";
       if (d === "Invalid Date" || d === "NaN-NaN-NaN") d = String(raw).split("T")[0] || "Unknown Date";
     } catch(e) { d = "Unknown Date"; }
     if (!byDate[d]) byDate[d] = [];
