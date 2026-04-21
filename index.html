@@ -682,8 +682,8 @@ body.admin-mode #toast {
   font-size: 13px;
 }
 /* Column widths — fixed so nothing collapses */
-.admin-table col.col-id       { width: 90px; }
-.admin-table col.col-entity   { width: 130px; }
+.admin-table col.col-id       { width: 100px; }
+.admin-table col.col-entity   { width: 80px; }
 .admin-table col.col-account  { width: 150px; }
 .admin-table col.col-service  { width: 130px; }
 .admin-table col.col-commodity{ width: 120px; }
@@ -693,7 +693,7 @@ body.admin-mode #toast {
 .admin-table col.col-status   { width: 130px; }
 .admin-table col.col-photo    { width: 72px; }
 .admin-table col.col-updated  { width: 150px; }
-.admin-table col.col-actions  { width: 150px; }
+.admin-table col.col-actions  { width: 110px; }
 .admin-table thead tr {
   background: var(--surface);
   border-bottom: 2px solid var(--border);
@@ -749,6 +749,11 @@ body.admin-mode #toast {
   font-size: 11px;
   color: var(--accent);
 }
+
+.admin-table td.td-updated {
+  color: #ffffff !important;
+  font-weight: 400;
+}
 .admin-table td.td-entity { font-weight: 700; }
 .admin-table td.td-account { color: var(--muted); font-size: 12px; }
 .admin-table td.td-num {
@@ -762,6 +767,24 @@ body.admin-mode #toast {
   color: var(--muted);
 }
 .admin-table td.td-assigned { font-size: 12px; }
+.admin-table col.col-ci     { width: 95px; }
+.admin-table col.col-pickup { width: 130px; }
+.admin-table td.td-ci {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  white-space: normal;
+  line-height: 1.6;
+  vertical-align: middle;
+}
+.admin-table td.td-pickup {
+  font-size: 11px;
+  color: var(--accent);
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.4;
+  vertical-align: middle;
+}
 .admin-table td.td-photo { text-align: center; overflow: visible; }
 .admin-table td.td-status { overflow: visible; }
 .admin-table td.td-actions {
@@ -2010,10 +2033,11 @@ function renderShipments(ships) {
     { key:"Date",        label:"Date" },
     { key:"Assigned",    label:"Assigned" },
     { key:"Status",      label:"Status" },
-    { key:"UpdatedAt",   label:"Last updated" },
-    { key:"CheckInAt",   label:"Check In" },
-    { key:"CheckOutAt",  label:"Check Out" },
-    { key:"_photo",      label:"Photo",   noSort:true },
+    { key:"UpdatedAt",      label:"Last updated" },
+    { key:"CheckInAt",      label:"Check In" },
+    { key:"CheckOutAt",     label:"Check Out" },
+    { key:"PickupLocation", label:"Pickup Location", noSort:true },
+    { key:"_photo",         label:"Photo",   noSort:true },
   ];
 
   const thHtml = cols.map(c => {
@@ -2051,9 +2075,10 @@ function renderShipments(ships) {
       <td class="td-date">${fmtDate(s.Date||"")}</td>
       <td class="td-assigned">${s.Assigned?`👤 ${esc(s.Assigned)}`:"—"}</td>
       <td class="td-status"><span class="status-badge ${sb}">${esc(s.Status||"—")}</span></td>
-      <td class="td-date td-updated">${fmtUpdated(s.UpdatedAt)}</td>
-      <td class="td-date td-white" style="font-size:12px">${s.CheckInAt  ? esc(s.CheckInAt)  : '<span style="color:var(--muted)">—</span>'}</td>
-      <td class="td-date td-white" style="font-size:12px">${s.CheckOutAt ? esc(s.CheckOutAt) : '<span style="color:var(--muted)">—</span>'}</td>
+      <td class="td-date td-ci">${fmtUpdated(s.UpdatedAt)}</td>
+      <td class="td-date td-ci">${s.CheckInAt  ? fmtCheckInOut(s.CheckInAt)  : '<span style="color:var(--muted)">—</span>'}</td>
+      <td class="td-date td-ci">${s.CheckOutAt ? fmtCheckInOut(s.CheckOutAt) : '<span style="color:var(--muted)">—</span>'}</td>
+      <td class="td-pickup">${s.PickupLocation ? esc(s.PickupLocation) : '<span style="color:var(--muted)">—</span>'}</td>
       <td class="td-photo">${photoCell}</td>
     </tr>`;
   }).join("");
@@ -2065,7 +2090,7 @@ function renderShipments(ships) {
         <col class="col-actions"/><col class="col-id"/><col class="col-entity"/><col class="col-account"/>
         <col class="col-service"/><col class="col-commodity"/><col class="col-boxes"/>
         <col class="col-date"/><col class="col-assigned"/><col class="col-status"/>
-        <col class="col-updated"/><col style="width:110px"/><col style="width:110px"/><col class="col-photo"/>
+        <col class="col-updated"/><col class="col-ci"/><col class="col-ci"/><col class="col-pickup"/><col class="col-photo"/>
       </colgroup>
       <thead><tr>${thHtml}</tr></thead>
       <tbody>${rowsHtml}</tbody>
@@ -2079,21 +2104,38 @@ function tableSort(col) {
   renderShipments(allShips);
 }
 
-function fmtUpdated(val) {
-  if (!val || String(val).trim() === "") return "—";
-  try {
-    const d = new Date(val);
-    if (isNaN(d.getTime())) return String(val);
-    const now = new Date();
-    const isToday = d.getDate()===now.getDate()&&d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
-    const hhmm = d.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:false});
-    if (isToday) return "Today "+hhmm;
-    // Use numeric day/month — no month words
-    const dd = String(d.getDate()).padStart(2,"0");
-    const mm = String(d.getMonth()+1).padStart(2,"0");
-    return dd+"/"+mm+" "+hhmm;
-  } catch(e) { return String(val); }
+// Shared: parse en-IN locale datetime string or ISO → Date object
+function parseDateTimeStr(s) {
+  if (!s) return null;
+  s = String(s).trim();
+  // en-IN: "29/03/2026, 14:35:00" or "29/03/2026, 02:35:00 PM"
+  var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*(AM|PM))?$/i);
+  if (m) {
+    var hr = parseInt(m[4]), mn = parseInt(m[5]), sc = parseInt(m[6]||0);
+    if (m[7] && m[7].toUpperCase()==="PM" && hr<12) hr+=12;
+    if (m[7] && m[7].toUpperCase()==="AM" && hr===12) hr=0;
+    return new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1]), hr, mn, sc);
+  }
+  var d = new Date(s);
+  return isNaN(d) ? null : d;
 }
+
+// Format to mm/dd/yyyy<br>hh:mm AM/PM
+function fmtDateTime(val) {
+  if (!val || String(val).trim() === "") return "—";
+  var d = parseDateTimeStr(String(val).trim());
+  if (!d) return String(val);
+  var mm   = String(d.getMonth()+1).padStart(2,"0");
+  var dd   = String(d.getDate()).padStart(2,"0");
+  var yyyy = d.getFullYear();
+  var hr   = d.getHours(), mn = String(d.getMinutes()).padStart(2,"0");
+  var ampm = hr >= 12 ? "PM" : "AM";
+  hr = hr % 12 || 12;
+  return mm+"/"+dd+"/"+yyyy+"<br>"+String(hr).padStart(2,"0")+":"+mn+" "+ampm;
+}
+
+function fmtUpdated(val) { return fmtDateTime(val); }
+function fmtCheckInOut(val) { return fmtDateTime(val); }
 
 // Parse date-only string (YYYY-MM-DD) in local time to avoid UTC day-shift
 function parseDateLocal(raw) {
@@ -2105,21 +2147,20 @@ function parseDateLocal(raw) {
   return new Date(s); // ISO with time — use as-is
 }
 
-// Format date field for display — avoids UTC day-shift
+// Format date field for display as mm/dd/yyyy — avoids UTC day-shift
 function fmtDate(raw) {
-  if (!raw) return String(raw||"");
+  if (!raw) return "";
   var s = String(raw).trim();
-  // If already dd-mm-yyyy or dd/mm/yyyy — show as-is
-  if (/^\d{2}[-\/]\d{2}[-\/]\d{4}$/.test(s)) return s;
-  // If YYYY-MM-DD — parse local and reformat
+  // YYYY-MM-DD → mm/dd/yyyy
   var m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (m) return m[3]+"/"+m[2]+"/"+m[1];
-  // ISO with time — extract date portion locally
+  if (m) return m[2]+"/"+m[3]+"/"+m[1];
+  // dd/mm/yyyy → mm/dd/yyyy
+  var m2 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m2) return m2[2]+"/"+m2[1]+"/"+m2[3];
+  // ISO with time — extract local date
   var d = new Date(s);
   if (!isNaN(d)) {
-    var dd = String(d.getDate()).padStart(2,"0");
-    var mo = String(d.getMonth()+1).padStart(2,"0");
-    return dd+"/"+mo+"/"+d.getFullYear();
+    return String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0")+"/"+d.getFullYear();
   }
   return s;
 }
