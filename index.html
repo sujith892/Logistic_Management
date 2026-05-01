@@ -161,12 +161,16 @@ body::before{
 .tab.admin-tab.show{display:flex;}
 
 /* ── SCREENS ── */
-.screens{flex:1;overflow:hidden;position:relative;}
+.screens{flex:1;overflow:hidden;position:relative;min-height:0;}
 .screen{
-  position:absolute;inset:0;overflow-y:auto;
+  position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
   padding:14px;padding-bottom:calc(14px + var(--safe-bot));
   display:none;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;scrollbar-color:var(--border) transparent;
 }
+.screen::-webkit-scrollbar{width:4px;}
+.screen::-webkit-scrollbar-track{background:transparent;}
+.screen::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px;}
 .screen.active{display:block;animation:scIn 0.2s ease;}
 @keyframes scIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
@@ -202,6 +206,41 @@ body::before{
 }
 .field option{background:var(--card);}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* ── SEARCHABLE DROPDOWN ── */
+.sd-wrap{position:relative;}
+.sd-input{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:11px 36px 11px 13px;color:var(--text);
+  font-family:var(--font);font-size:14px;outline:none;cursor:pointer;
+  transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234a7a9b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;
+}
+.sd-input:focus,.sd-input.open{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,212,255,0.1);}
+.sd-dropdown{
+  display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:500;
+  background:var(--card);border:1px solid var(--accent);border-radius:10px;
+  overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.5);
+}
+.sd-dropdown.open{display:block;}
+.sd-search{
+  width:100%;background:var(--surface);border:none;border-bottom:1px solid var(--border);
+  padding:10px 13px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;
+}
+.sd-search::placeholder{color:var(--muted);}
+.sd-list{max-height:200px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.sd-list::-webkit-scrollbar{width:4px;}
+.sd-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px;}
+.sd-option{
+  padding:10px 13px;font-size:13px;cursor:pointer;transition:background .12s;
+  border-bottom:1px solid rgba(26,58,92,0.4);font-family:var(--font);
+}
+.sd-option:last-child{border-bottom:none;}
+.sd-option:hover,.sd-option.highlighted{background:rgba(0,212,255,0.1);color:var(--accent);}
+.sd-option.placeholder-opt{color:var(--muted);}
+.sd-no-results{padding:10px 13px;color:var(--muted);font-size:12px;font-style:italic;}
+.sd-real-select{display:none;}
 
 /* ── BUTTONS ── */
 .btn{
@@ -480,7 +519,10 @@ body.admin-mode .etab {
   border-radius:2px;transition:width 0.3s ease;
 }
 
-::-webkit-scrollbar{width:0;}
+/* Hide scrollbars on non-scrollable elements but keep them on screens */
+.entity-tabs::-webkit-scrollbar{display:none;}
+.em-acc-drop-list::-webkit-scrollbar{width:4px;}
+.sd-list::-webkit-scrollbar{width:4px;}
 
 /* ══ ADMIN DESKTOP LAYOUT ══════════════════════════════════════ */
 body.admin-mode {
@@ -604,6 +646,11 @@ body.admin-mode #screen-create .row2 {
   grid-template-columns: 1fr 1fr 1fr;
 }
 
+/* Ensure create screen always has enough room to scroll to the button */
+#screen-create {
+  padding-bottom: calc(80px + var(--safe-bot));
+}
+
 /* Desktop drivers */
 body.admin-mode #screen-drivers.active {
   display: grid;
@@ -685,10 +732,12 @@ body.admin-mode #toast {
 .admin-table col.col-id       { width: 100px; }
 .admin-table col.col-entity   { width: 80px; }
 .admin-table col.col-account  { width: 150px; }
+.admin-table col.col-pickup   { width: 140px; }
 .admin-table col.col-service  { width: 130px; }
 .admin-table col.col-commodity{ width: 120px; }
+.admin-table col.col-date-req { width: 160px; }
+.admin-table col.col-date     { width: 120px; }
 .admin-table col.col-boxes    { width: 70px; }
-.admin-table col.col-date     { width: 110px; }
 .admin-table col.col-assigned { width: 120px; }
 .admin-table col.col-status   { width: 130px; }
 .admin-table col.col-photo    { width: 72px; }
@@ -1005,28 +1054,60 @@ body.admin-mode #toast {
       <div class="row2">
         <div class="field">
           <label>Entity *</label>
-          <select id="c-entity"><option value="">— Loading… —</option></select>
+          <div class="sd-wrap" id="sd-c-entity-wrap">
+            <div class="sd-input" id="sd-c-entity-display" onclick="sdOpen('c-entity')" tabindex="0">— Select Entity —</div>
+            <div class="sd-dropdown" id="sd-c-entity-drop">
+              <input class="sd-search" placeholder="🔍 Search entity…" oninput="sdFilter('c-entity',this.value)" onkeydown="sdKey(event,'c-entity')"/>
+              <div class="sd-list" id="sd-c-entity-list"></div>
+            </div>
+            <select id="c-entity" class="sd-real-select"><option value="">— Select Entity —</option></select>
+          </div>
         </div>
         <div class="field">
           <label>Account Name *</label>
-          <select id="c-account"><option value="">— Loading… —</option></select>
+          <div class="sd-wrap" id="sd-c-account-wrap">
+            <div class="sd-input" id="sd-c-account-display" onclick="sdOpen('c-account')" tabindex="0">— Select Account —</div>
+            <div class="sd-dropdown" id="sd-c-account-drop">
+              <input class="sd-search" placeholder="🔍 Search account…" oninput="sdFilter('c-account',this.value)" onkeydown="sdKey(event,'c-account')"/>
+              <div class="sd-list" id="sd-c-account-list"></div>
+            </div>
+            <select id="c-account" class="sd-real-select"><option value="">— Select Account —</option></select>
+          </div>
         </div>
       </div>
       <div class="row2">
         <div class="field">
           <label>Service Type</label>
-          <select id="c-service"><option value="">— Loading… —</option></select>
+          <div class="sd-wrap" id="sd-c-service-wrap">
+            <div class="sd-input" id="sd-c-service-display" onclick="sdOpen('c-service')" tabindex="0">— Select Service Type —</div>
+            <div class="sd-dropdown" id="sd-c-service-drop">
+              <input class="sd-search" placeholder="🔍 Search service…" oninput="sdFilter('c-service',this.value)" onkeydown="sdKey(event,'c-service')"/>
+              <div class="sd-list" id="sd-c-service-list"></div>
+            </div>
+            <select id="c-service" class="sd-real-select"><option value="">— Select Service Type —</option></select>
+          </div>
         </div>
         <div class="field"><label>Commodity</label><input type="text" id="c-commodity" placeholder="Type of goods"/></div>
       </div>
       <div class="row2">
         <div class="field"><label>Boxes</label><input type="number" id="c-boxes" placeholder="0" min="1"/></div>
-        <div class="field"><label>Date</label><input type="date" id="c-date"/></div>
+        <div class="field"><label>Pickup Date</label><input type="date" id="c-date"/></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Date Requested</label><input type="date" id="c-date-requested"/></div>
+        <div class="field"></div>
       </div>
       <div class="row2">
         <div class="field">
           <label>Assign To</label>
-          <select id="c-assigned"><option value="">— Loading… —</option></select>
+          <div class="sd-wrap" id="sd-c-assigned-wrap">
+            <div class="sd-input" id="sd-c-assigned-display" onclick="sdOpen('c-assigned')" tabindex="0">— Select Driver —</div>
+            <div class="sd-dropdown" id="sd-c-assigned-drop">
+              <input class="sd-search" placeholder="🔍 Search driver…" oninput="sdFilter('c-assigned',this.value)" onkeydown="sdKey(event,'c-assigned')"/>
+              <div class="sd-list" id="sd-c-assigned-list"></div>
+            </div>
+            <select id="c-assigned" class="sd-real-select"><option value="">— Select Driver —</option></select>
+          </div>
         </div>
         <div class="field">
           <label>Status</label>
@@ -1042,7 +1123,14 @@ body.admin-mode #toast {
         </div>
       </div>
       <div class="field"><label>Pickup Location</label>
-        <select id="c-pickup"><option value="">— Select Location —</option></select>
+        <div class="sd-wrap" id="sd-c-pickup-wrap">
+          <div class="sd-input" id="sd-c-pickup-display" onclick="sdOpen('c-pickup')" tabindex="0">— Select Location —</div>
+          <div class="sd-dropdown" id="sd-c-pickup-drop">
+            <input class="sd-search" placeholder="🔍 Search location…" oninput="sdFilter('c-pickup',this.value)" onkeydown="sdKey(event,'c-pickup')"/>
+            <div class="sd-list" id="sd-c-pickup-list"></div>
+          </div>
+          <select id="c-pickup" class="sd-real-select"><option value="">— Select Location —</option></select>
+        </div>
       </div>
       <div class="field"><label>Notes</label>
         <textarea id="c-notes" placeholder="Any additional notes…" style="resize:none;height:70px;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;line-height:1.5"></textarea>
@@ -1294,6 +1382,16 @@ body.admin-mode #toast {
       </select>
     </div>
 
+    <!-- ETA FIELD (driver) -->
+    <div class="field" style="margin-top:4px">
+      <label>🕐 Driver ETA <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(optional — e.g. 2:30 PM or 45 min)</span></label>
+      <input type="text" id="s-DriverETA" placeholder="e.g. 2:30 PM or ~45 min away"
+             style="width:100%;background:var(--surface);border:1px solid var(--border);
+                    border-radius:8px;padding:11px 13px;color:var(--text);
+                    font-family:var(--font);font-size:14px;outline:none;
+                    transition:border-color .2s,box-shadow .2s"/>
+    </div>
+
     <!-- PHOTO UPLOAD -->
     <div class="field" style="margin-top:12px">
       <label>📷 Photo <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(optional — auto-uploads on select)</span></label>
@@ -1454,15 +1552,74 @@ body.admin-mode #toast {
                      font-size:12px;font-weight:700;cursor:pointer">📍 Location</button>
     </div>
 
-    <!-- List -->
+    <!-- Standard list (entity / account / service) -->
     <div id="em-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;
-         max-height:260px;overflow-y:auto;overflow-x:hidden;
+         max-height:240px;overflow-y:auto;overflow-x:hidden;
          scrollbar-width:thin;scrollbar-color:var(--border) transparent;
          padding-right:4px"></div>
     <style>
       #em-list::-webkit-scrollbar{width:5px}
       #em-list::-webkit-scrollbar-track{background:transparent}
       #em-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px}
+    </style>
+
+    <!-- Location tab: per-location rows with account mapping -->
+    <div id="em-loc-panel" style="display:none;flex-direction:column;gap:8px;margin-bottom:12px;
+         max-height:280px;overflow-y:auto;overflow-x:hidden;
+         scrollbar-width:thin;scrollbar-color:var(--border) transparent;padding-right:4px"
+         id="em-loc-panel"></div>
+    <style>
+      #em-loc-panel::-webkit-scrollbar{width:5px}
+      #em-loc-panel::-webkit-scrollbar-track{background:transparent}
+      #em-loc-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px}
+      .em-loc-row{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;position:relative;}
+      .em-loc-name{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+      .em-loc-name input{flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);
+        color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;padding:2px 4px;outline:none;}
+      .em-loc-name input:focus{border-bottom-color:var(--accent);}
+      /* checkbox-dropdown trigger */
+      .em-acc-trigger{
+        display:flex;align-items:center;justify-content:space-between;
+        background:var(--card);border:1px solid var(--border);border-radius:8px;
+        padding:7px 11px;font-size:12px;color:var(--text);cursor:pointer;
+        transition:border-color .15s;user-select:none;gap:8px;
+      }
+      .em-acc-trigger:hover{border-color:var(--accent);}
+      .em-acc-trigger .trigger-label{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--font);}
+      .em-acc-trigger .trigger-arrow{color:var(--muted);font-size:10px;flex-shrink:0;transition:transform .2s;}
+      .em-acc-trigger.open .trigger-arrow{transform:rotate(180deg);}
+      /* dropdown panel */
+      .em-acc-drop{
+        display:none;position:absolute;left:12px;right:12px;z-index:600;
+        background:var(--card);border:1px solid var(--accent);border-radius:10px;
+        box-shadow:0 8px 24px rgba(0,0,0,.55);overflow:hidden;
+      }
+      .em-acc-drop.open{display:block;}
+      .em-acc-drop-search{
+        width:100%;background:var(--surface);border:none;border-bottom:1px solid var(--border);
+        padding:9px 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;
+      }
+      .em-acc-drop-search::placeholder{color:var(--muted);}
+      .em-acc-drop-list{max-height:160px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+      .em-acc-drop-item{
+        display:flex;align-items:center;gap:10px;padding:9px 12px;
+        font-size:13px;font-family:var(--font);cursor:pointer;
+        border-bottom:1px solid rgba(26,58,92,.35);transition:background .1s;
+      }
+      .em-acc-drop-item:last-child{border-bottom:none;}
+      .em-acc-drop-item:hover{background:rgba(0,212,255,.07);}
+      .em-acc-drop-item input[type=checkbox]{
+        width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;
+      }
+      .em-acc-drop-item span{flex:1;color:var(--text);}
+      .em-acc-drop-item.checked span{color:var(--accent);font-weight:600;}
+      .em-acc-drop-footer{
+        padding:7px 12px;font-size:11px;color:var(--muted);
+        border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;
+        background:rgba(0,212,255,.03);
+      }
+      .em-acc-drop-selall{color:var(--accent);cursor:pointer;font-weight:600;font-size:11px;}
+      .em-acc-drop-selall:hover{text-decoration:underline;}
     </style>
 
     <!-- Add new -->
@@ -1613,7 +1770,7 @@ function closeUploadPreview() {
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyR5jY7m1VYPifEKoQnczTozaJ5adwqcJ4msjB-h-J1ZrLD0q2h_3HXK2cBRRRw2guQ/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw5X6qvuPpgppd4ZAS0r9U0cZ7ajuqxVOPjuVnAj601hE2uiGaVbb9FzhTm7YJVWw/exec";
 
 // ── STATE ──────────────────────────────────────────────────────
 let session      = { username:"", token:"", role:"", driverName:"", email:"" };
@@ -1793,33 +1950,91 @@ function enterApp() {
 }
 
 // ── LOAD DROPDOWNS ─────────────────────────────────────────────
+// Global account→location map (populated by loadDropdowns)
+var _accountLocationMap = {};
+
 async function loadDropdowns() {
   try {
     const res = await api(authPayload({ action:"getDropdowns" }));
     if (!res.success) return;
-    const entityOpts = `<option value="">— Select Entity —</option>` +
+
+    // Store map globally for form filtering
+    _accountLocationMap = res.accountLocationMap || {};
+
+    // Helper to set both real select AND searchable dropdown
+    function setSD(id, placeholder, opts) {
+      const sel = document.getElementById(id);
+      if (sel) sel.innerHTML = `<option value="">${placeholder}</option>` +
+        opts.map(o=>`<option value="${esc(o.value||o)}">${esc(o.label||o)}</option>`).join("");
+      sdData[id] = [{ label: placeholder, value: "" }].concat(
+        opts.map(o=>({ label: o.label||o, value: o.value||o }))
+      );
+      sdRenderList(id, "");
+    }
+
+    setSD("c-entity",   "— Select Entity —",       res.entities);
+    setSD("c-account",  "— Select Account —",       res.accountNames);
+    setSD("c-service",  "— Select Service Type —",  res.serviceTypes);
+    setSD("c-assigned", "— Select Driver —",
+      res.drivers.map(d=>({ label: `${d.label} (@${d.value})`, value: d.value })));
+
+    // Store master list for fallback filtering
+    sdData["c-pickup-all"] = [{ label:"— Select Location —", value:"" }].concat(
+      (res.pickupLocations||[]).map(p=>({ label:p, value:p }))
+    );
+    setSD("c-pickup", "— Select Location —", res.pickupLocations||[]);
+
+    // Edit modal real selects (non-searchable)
+    const entityOpts = `<option value="">— Select —</option>` +
       res.entities.map(e=>`<option value="${esc(e)}">${esc(e)}</option>`).join("");
-    document.getElementById("c-entity").innerHTML = entityOpts;
     document.getElementById("e-Entity").innerHTML = entityOpts;
-    const accountOpts = `<option value="">— Select Account —</option>` +
+    const accountOpts = `<option value="">— Select —</option>` +
       res.accountNames.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join("");
-    document.getElementById("c-account").innerHTML = accountOpts;
     document.getElementById("e-AccountName").innerHTML = accountOpts;
     const svcOpts = `<option value="">— Select Service Type —</option>` +
       res.serviceTypes.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
-    document.getElementById("c-service").innerHTML = svcOpts;
     document.getElementById("e-ServiceType").innerHTML = svcOpts;
     const driverOpts = `<option value="">— Select Driver —</option>` +
       res.drivers.map(d=>`<option value="${esc(d.value)}">${esc(d.label)} (@${esc(d.value)})</option>`).join("");
-    document.getElementById("c-assigned").innerHTML = driverOpts;
     document.getElementById("e-Assigned").innerHTML = driverOpts;
     const pickupOpts = `<option value="">— Select Location —</option>` +
       (res.pickupLocations||[]).map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join("");
-    var cpick = document.getElementById("c-pickup");
-    if (cpick) cpick.innerHTML = pickupOpts;
     var epick = document.getElementById("e-PickupLocation");
     if (epick) epick.innerHTML = pickupOpts;
+
+    // Lock pickup until account is selected
+    onAccountChange("");
   } catch(e) { console.error("Dropdown load failed:", e); }
+}
+
+// Called by sdSelect when Account changes in New Shipment form
+function onAccountChange(accountValue) {
+  sdReset("c-pickup");
+  var disp = document.getElementById("sd-c-pickup-display");
+  var wrap = document.getElementById("sd-c-pickup-wrap");
+
+  if (!accountValue) {
+    // No account selected — lock pickup, show prompt
+    sdData["c-pickup"] = [{ label:"— Select Account first —", value:"" }];
+    if (disp) { disp.textContent = "— Select Account first —"; disp.style.color = "var(--muted)"; disp.style.opacity = "0.55"; disp.style.pointerEvents = "none"; }
+    if (wrap) wrap.title = "Please select an Account first";
+  } else {
+    const mapped = _accountLocationMap[accountValue];
+    if (disp) { disp.style.opacity = ""; disp.style.pointerEvents = ""; }
+    if (wrap) wrap.title = "";
+    if (mapped && mapped.length) {
+      // Strict: only locations mapped to this account
+      sdData["c-pickup"] = [{ label:"— Select Location —", value:"" }].concat(
+        mapped.map(function(l){ return { label: l, value: l }; })
+      );
+      if (disp) { disp.textContent = "— Select Location —"; disp.style.color = "var(--muted)"; }
+    } else {
+      // Account has no mapped locations
+      sdData["c-pickup"] = [{ label:"— No locations for this account —", value:"" }];
+      if (disp) { disp.textContent = "— No locations for this account —"; disp.style.color = "var(--muted)"; disp.style.opacity = "0.55"; disp.style.pointerEvents = "none"; }
+    }
+  }
+  sdRenderList("c-pickup", "");
 }
 
 // ── LOGOUT ─────────────────────────────────────────────────────
@@ -1999,6 +2214,7 @@ function renderShipments(ships) {
           ${s.Assigned   ?`<span class="chip muted">👤 ${esc(s.Assigned)}</span>`:""}
           ${s.Date       ?`<span class="chip muted">📅 ${fmtDate(s.Date)}</span>`:""}
           ${s.UpdatedAt  ?`<span class="chip muted">🕐 ${esc(fmtUpdated(s.UpdatedAt))}</span>`:""}
+          ${s.DriverETA  ?`<span class="chip" style="background:rgba(255,214,10,0.12);color:var(--yellow);border-color:rgba(255,214,10,0.3)">🚗 ETA: ${esc(s.DriverETA)}</span>`:""}
         </div>
         ${s.PickupLocation?`<div style="margin:4px 0;padding:8px 12px;background:rgba(0,212,255,0.05);border-left:3px solid rgba(0,212,255,0.4);border-radius:0 8px 8px 0;font-size:12px"><span style="color:var(--accent);font-weight:600">📍 Pickup:</span> <span style="color:var(--muted)">${esc(s.PickupLocation)}</span></div>`:""}
         ${s.Notes?`<div style="margin:4px 0;padding:8px 12px;background:rgba(255,255,255,0.03);border-left:3px solid rgba(255,255,255,0.15);border-radius:0 8px 8px 0;font-size:12px"><span style="color:var(--text);font-weight:600">📝 Notes:</span> <span style="color:var(--muted)">${esc(s.Notes)}</span></div>`:""}
@@ -2023,21 +2239,20 @@ function renderShipments(ships) {
   }
 
   const cols = [
-    { key:"_actions",    label:"",        noSort:true },
-    { key:"ID",          label:"ID" },
-    { key:"Entity",      label:"Entity" },
-    { key:"AccountName", label:"Account" },
-    { key:"ServiceType", label:"Service Type" },
-    { key:"Commodity",   label:"Commodity" },
-    { key:"Boxes",       label:"Boxes" },
-    { key:"Date",        label:"Date" },
-    { key:"Assigned",    label:"Assigned" },
-    { key:"Status",      label:"Status" },
-    { key:"UpdatedAt",      label:"Last updated" },
+    { key:"_actions",       label:"",                 noSort:true },
+    { key:"Entity",         label:"Entity" },
+    { key:"AccountName",    label:"Account" },
+    { key:"PickupLocation", label:"Pickup Location",  noSort:true },
+    { key:"ServiceType",    label:"Service Type" },
+    { key:"Commodity",      label:"Commodity" },
+    { key:"DateRequested",  label:"Pickup Request Date" },
+    { key:"Date",           label:"Pickup Date" },
+    { key:"Status",         label:"Status" },
+    { key:"DriverETA",      label:"Driver ETA",       noSort:true },
+    { key:"UpdatedAt",      label:"Last Update" },
     { key:"CheckInAt",      label:"Check In" },
     { key:"CheckOutAt",     label:"Check Out" },
-    { key:"PickupLocation", label:"Pickup Location", noSort:true },
-    { key:"_photo",         label:"Photo",   noSort:true },
+    { key:"_photo",         label:"Photo",            noSort:true },
   ];
 
   const thHtml = cols.map(c => {
@@ -2066,19 +2281,18 @@ function renderShipments(ships) {
           <button class="tbl-btn tbl-btn-del"  onclick="delShipment('${esc(s.ID)}',this)">🗑</button>
         </div>
       </td>
-      <td class="td-id">${esc(s.ID||"—")}</td>
       <td class="td-entity">${esc(s.Entity||"—")}</td>
       <td class="td-account td-white-bold">${esc(s.AccountName||"—")}</td>
+      <td class="td-pickup">${s.PickupLocation ? esc(s.PickupLocation) : '<span style="color:var(--muted)">—</span>'}</td>
       <td>${esc(s.ServiceType||"—")}</td>
       <td>${esc(s.Commodity||"—")}</td>
-      <td class="td-num">${esc(s.Boxes||"—")}</td>
+      <td class="td-date">${s.DateRequested ? fmtDate(s.DateRequested) : '<span style="color:var(--muted)">—</span>'}</td>
       <td class="td-date">${fmtDate(s.Date||"")}</td>
-      <td class="td-assigned">${s.Assigned?`👤 ${esc(s.Assigned)}`:"—"}</td>
       <td class="td-status"><span class="status-badge ${sb}">${esc(s.Status||"—")}</span></td>
+      <td class="td-ci">${s.DriverETA ? `<span style="color:var(--yellow);font-weight:700">🕐 ${esc(s.DriverETA)}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
       <td class="td-date td-ci">${fmtUpdated(s.UpdatedAt)}</td>
       <td class="td-date td-ci">${s.CheckInAt  ? fmtCheckInOut(s.CheckInAt)  : '<span style="color:var(--muted)">—</span>'}</td>
       <td class="td-date td-ci">${s.CheckOutAt ? fmtCheckInOut(s.CheckOutAt) : '<span style="color:var(--muted)">—</span>'}</td>
-      <td class="td-pickup">${s.PickupLocation ? esc(s.PickupLocation) : '<span style="color:var(--muted)">—</span>'}</td>
       <td class="td-photo">${photoCell}</td>
     </tr>`;
   }).join("");
@@ -2087,10 +2301,13 @@ function renderShipments(ships) {
   <div class="admin-table-wrap">
     <table class="admin-table">
       <colgroup>
-        <col class="col-actions"/><col class="col-id"/><col class="col-entity"/><col class="col-account"/>
-        <col class="col-service"/><col class="col-commodity"/><col class="col-boxes"/>
-        <col class="col-date"/><col class="col-assigned"/><col class="col-status"/>
-        <col class="col-updated"/><col class="col-ci"/><col class="col-ci"/><col class="col-pickup"/><col class="col-photo"/>
+        <col class="col-actions"/>
+        <col class="col-entity"/><col class="col-account"/>
+        <col class="col-pickup"/><col class="col-service"/><col class="col-commodity"/>
+        <col class="col-date-req"/><col class="col-date"/><col class="col-status"/>
+        <col style="width:110px"/><col class="col-updated"/>
+        <col class="col-ci"/><col class="col-ci"/>
+        <col class="col-photo"/>
       </colgroup>
       <thead><tr>${thHtml}</tr></thead>
       <tbody>${rowsHtml}</tbody>
@@ -2259,22 +2476,25 @@ async function createShipment() {
       Boxes:       document.getElementById("c-boxes").value,
       Assigned:    document.getElementById("c-assigned").value,
       Date:        document.getElementById("c-date").value,
+      DateRequested: (document.getElementById("c-date-requested")||{}).value||"",
       Status:      document.getElementById("c-status").value,
       PickupLocation: (document.getElementById("c-pickup")||{}).value||"",
       Notes:          (document.getElementById("c-notes")||{}).value||"",
     }));
     if (res.success) {
       toast("✅ Shipment created: "+res.id,"ok");
-      document.getElementById("c-entity").value   = "";
-      document.getElementById("c-account").value  = "";
-      document.getElementById("c-assigned").value = "";
-      document.getElementById("c-service").value  = "";
+      sdReset("c-entity");
+      sdReset("c-account");
+      sdReset("c-assigned");
+      sdReset("c-service");
+      sdReset("c-pickup");
+      onAccountChange(""); // re-lock pickup
       const cSt = document.getElementById("c-status");
       cSt.value = ""; cSt.classList.remove("green","yellow","red");
       document.getElementById("c-commodity").value = "";
       document.getElementById("c-boxes").value    = "";
       document.getElementById("c-date").value     = todayISO();
-      var pu = document.getElementById("c-pickup"); if(pu) pu.value="";
+      var dr = document.getElementById("c-date-requested"); if(dr) dr.value="";
       var nt = document.getElementById("c-notes");  if(nt) nt.value="";
       loadShipments(); showTab("shipments");
     } else throw new Error(res.message);
@@ -2335,6 +2555,8 @@ function openStatus(s) {
   const sSt = document.getElementById("s-Status");
   sSt.value = s.Status || "";
   applyStatusColor(sSt);
+  var etaEl = document.getElementById("s-DriverETA");
+  if (etaEl) etaEl.value = s.DriverETA || "";
   removePhoto();
   window._currentShipmentId = s.ID;
   document.getElementById("statusOverlay").classList.add("open");
@@ -2463,11 +2685,14 @@ async function saveStatus() {
   const id     = document.getElementById("s-ID").value;
   const status = document.getElementById("s-Status").value;
   if (!status) { toast("⚠ Please select a status", "er"); return; }
+  const eta = (document.getElementById("s-DriverETA")||{}).value || "";
   const btn = document.getElementById("saveStatusBtn");
   btn.innerHTML = '<span class="spin"></span>'; btn.disabled = true;
   showLoading("Updating status…");
   try {
-    const res = await api(authPayload({ action:"updateShipment", ID:id, Status:status }));
+    const payload = authPayload({ action:"updateShipment", ID:id, Status:status });
+    if (eta) payload["DriverETA"] = eta;
+    const res = await api(payload);
     if (!res.success) throw new Error(res.message);
     toast("✅ Status saved: " + status, "ok");
     loadShipments();
@@ -2721,12 +2946,25 @@ var _emLabel   = { entity:"entity name", account:"account name", service:"servic
 
 function openEntityManager() {
   _emTab = "entity";
-  // Always fetch fresh so all three tabs are populated
+  // Always fetch fresh so all tabs are populated
   api(authPayload({ action:"getDropdowns" })).then(function(res) {
     _cfg.entity   = res.entities        ? [...res.entities]        : [];
     _cfg.account  = res.accountNames   ? [...res.accountNames]   : [];
     _cfg.service  = res.serviceTypes   ? [...res.serviceTypes]   : [];
     _cfg.location = res.pickupLocations? [...res.pickupLocations]: [];
+    _cfg.accountLocationMap = res.accountLocationMap || {};
+
+    // Build _emLocMap: inverted index from accountLocationMap
+    // { "AccountA": ["Loc1","Loc2"] } → { "Loc1":["AccountA"], "Loc2":["AccountA"] }
+    _emLocMap = {};
+    Object.entries(_cfg.accountLocationMap).forEach(function(pair) {
+      var acc = pair[0], locs = pair[1];
+      locs.forEach(function(loc) {
+        if (!_emLocMap[loc]) _emLocMap[loc] = [];
+        if (_emLocMap[loc].indexOf(acc) === -1) _emLocMap[loc].push(acc);
+      });
+    });
+
     _emList = [..._cfg.entity];
     emRefresh();
     document.getElementById("entityManagerOverlay").classList.add("open");
@@ -2734,13 +2972,69 @@ function openEntityManager() {
 }
 
 function emSwitchTab(tab) {
-  if (_emTab === tab) return; // already on this tab
-  // _emList is already kept in sync via onchange on each input
-  // Just save it to _cfg for the current tab before switching
+  if (_emTab === tab) return;
+  emCollect(); // save current tab state into _emList
   _cfg[_emTab] = [..._emList];
+  // When leaving location tab, persist the current mapping into _cfg
+  if (_emTab === "location") {
+    _cfg.accountLocationMap = _emLocMapToAccountMap();
+  }
   _emTab = tab;
   _emList = Array.isArray(_cfg[tab]) ? [..._cfg[tab]] : [];
   emRefresh();
+}
+
+function emRemove(idx) {
+  _emList.splice(idx, 1);
+  emRender();
+}
+
+// Convert _emLocMap { "Loc":["Acc1","Acc2"] } → accountLocationMap { "Acc1":["Loc",…] }
+function _emLocMapToAccountMap() {
+  var out = {};
+  Object.entries(_emLocMap).forEach(function(pair) {
+    var loc = pair[0], accs = pair[1];
+    accs.forEach(function(acc) {
+      if (!out[acc]) out[acc] = [];
+      if (out[acc].indexOf(loc) === -1) out[acc].push(loc);
+    });
+  });
+  return out;
+}
+
+async function emSave() {
+  emCollect();
+  _cfg[_emTab] = [..._emList];
+
+  // Always build accountLocationMap from _emLocMap (the live working copy).
+  // If the user never opened the Location tab this session, _emLocMap was
+  // populated from the server on openEntityManager, so it is always current.
+  var accountLocationMap = _emLocMapToAccountMap();
+  // Also persist into _cfg so it survives tab switches within the same session
+  _cfg.accountLocationMap = accountLocationMap;
+
+  var btn = document.getElementById("emSaveBtn");
+  btn.innerHTML = '<span class="spin"></span>'; btn.disabled = true;
+  showLoading("Saving dropdowns…");
+  try {
+    var res = await api(authPayload({
+      action:             "saveConfig",
+      entities:           _cfg.entity    || [],
+      accountNames:       _cfg.account   || [],
+      serviceTypes:       _cfg.service   || [],
+      pickupLocations:    _cfg.location  || [],
+      statusValues:       _cfg.status    || [],
+      accountLocationMap: accountLocationMap,
+    }));
+    if (!res.success) throw new Error(res.message);
+    toast("✅ Saved!", "ok");
+    closeOverlay("entityManagerOverlay");
+    loadDropdowns();
+  } catch(e) {
+    toast("❌ " + e.message, "er");
+  } finally {
+    btn.innerHTML = "<span>💾 Save</span>"; btn.disabled = false;
+  }
 }
 
 function emRefresh() {
@@ -2755,7 +3049,18 @@ function emRefresh() {
   });
   var inp = document.getElementById("em-input");
   if (inp) inp.placeholder = "Add new " + (_emLabel[_emTab] || "value") + "…";
-  emRender();
+
+  var standardList = document.getElementById("em-list");
+  var locPanel     = document.getElementById("em-loc-panel");
+  if (_emTab === "location") {
+    if (standardList) standardList.style.display = "none";
+    if (locPanel)     locPanel.style.display      = "flex";
+    emRenderLocations();
+  } else {
+    if (standardList) standardList.style.display = "flex";
+    if (locPanel)     locPanel.style.display      = "none";
+    emRender();
+  }
 }
 
 function emRender() {
@@ -2783,7 +3088,187 @@ function emRender() {
   }).join("");
 }
 
+// ── Location tab: per-row with checkbox-dropdown Account mapping ─
+var _emLocMap    = {}; // { "LocationName": ["AccountA", "AccountB", …] }
+var _emOpenLocDrop = null; // loc name whose dropdown is currently open
+
+function emRenderLocations() {
+  var el = document.getElementById("em-loc-panel");
+  if (!el) return;
+
+  var locs     = _emList;
+  var accounts = _cfg.account || [];
+
+  if (!locs.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">No locations yet — add one below</div>';
+    return;
+  }
+
+  el.innerHTML = locs.map(function(loc, i) {
+    var mapped  = _emLocMap[loc] || [];
+    var label   = mapped.length
+      ? mapped.join(", ")
+      : '<span style="color:var(--muted)">— Link to account(s) —</span>';
+    var locId   = "emloc_" + i; // stable id per row position
+
+    var itemsHTML = accounts.length
+      ? accounts.map(function(acc) {
+          var chk = mapped.indexOf(acc) > -1;
+          return '<label class="em-acc-drop-item' + (chk ? " checked" : "") + '" ' +
+                 'onclick="emToggleAccMap(\'' + esc(loc).replace(/'/g,"\\'") + '\',\'' + esc(acc).replace(/'/g,"\\'") + '\',\'' + locId + '\')">' +
+                 '<input type="checkbox"' + (chk ? " checked" : "") + ' readonly onclick="return false"/>' +
+                 '<span>' + esc(acc) + '</span>' +
+                 '</label>';
+        }).join("")
+      : '<div style="padding:10px 12px;font-size:12px;color:var(--muted)">No accounts added yet</div>';
+
+    return '<div class="em-loc-row" id="row_' + locId + '">' +
+           '  <div class="em-loc-name">' +
+           '    <span style="font-size:15px">📍</span>' +
+           '    <input type="text" value="' + esc(loc) + '" data-idx="' + i + '" ' +
+           '      style="flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);' +
+           '      color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;padding:2px 4px;outline:none" ' +
+           '      oninput="emLocRename(\'' + esc(loc).replace(/'/g,"\\'") + '\',' + i + ',this.value)" ' +
+           '      onfocus="this.style.borderBottomColor=\'var(--accent)\'" ' +
+           '      onblur="this.style.borderBottomColor=\'var(--border)\'"/>' +
+           '    <button onclick="emRemoveLocAt(' + i + ')" ' +
+           '      style="background:rgba(255,71,87,0.12);border:1px solid rgba(255,71,87,0.25);' +
+           '      color:var(--red);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;flex-shrink:0">✕</button>' +
+           '  </div>' +
+           '  <div style="font-size:10px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px">📌 Linked Accounts</div>' +
+           '  <div class="em-acc-trigger" id="trig_' + locId + '" onclick="emAccDropToggle(\'' + esc(loc).replace(/'/g,"\\'") + '\',\'' + locId + '\')">' +
+           '    <span class="trigger-label" id="triglabel_' + locId + '">' + label + '</span>' +
+           '    <span class="trigger-arrow">▼</span>' +
+           '  </div>' +
+           '  <div class="em-acc-drop" id="drop_' + locId + '">' +
+           '    <input class="em-acc-drop-search" placeholder="🔍 Search accounts…" ' +
+           '      oninput="emAccDropFilter(this,\'' + locId + '\')" ' +
+           '      onclick="event.stopPropagation()"/>' +
+           '    <div class="em-acc-drop-list" id="droplist_' + locId + '">' + itemsHTML + '</div>' +
+           '    <div class="em-acc-drop-footer">' +
+           '      <span id="dropcount_' + locId + '" style="font-size:11px;color:var(--muted)">' +
+           '        ' + mapped.length + ' selected' +
+           '      </span>' +
+           '      <span class="em-acc-drop-selall" onclick="emAccSelAll(\'' + esc(loc).replace(/'/g,"\\'") + '\',\'' + locId + '\',true)">Select all</span>' +
+           '      &nbsp;·&nbsp;' +
+           '      <span class="em-acc-drop-selall" onclick="emAccSelAll(\'' + esc(loc).replace(/'/g,"\\'") + '\',\'' + locId + '\',false)">Clear</span>' +
+           '    </div>' +
+           '  </div>' +
+           '</div>';
+  }).join("");
+}
+
+function emAccDropToggle(loc, locId) {
+  var drop  = document.getElementById("drop_" + locId);
+  var trig  = document.getElementById("trig_" + locId);
+  if (!drop) return;
+  var isOpen = drop.classList.contains("open");
+  // Close any other open drop first
+  if (_emOpenLocDrop && _emOpenLocDrop !== locId) {
+    var prevDrop = document.getElementById("drop_" + _emOpenLocDrop);
+    var prevTrig = document.getElementById("trig_" + _emOpenLocDrop);
+    if (prevDrop) prevDrop.classList.remove("open");
+    if (prevTrig) prevTrig.classList.remove("open");
+  }
+  if (isOpen) {
+    drop.classList.remove("open");
+    if (trig) trig.classList.remove("open");
+    _emOpenLocDrop = null;
+  } else {
+    drop.classList.add("open");
+    if (trig) trig.classList.add("open");
+    _emOpenLocDrop = locId;
+    // Focus search
+    var srch = drop.querySelector(".em-acc-drop-search");
+    if (srch) { srch.value = ""; setTimeout(function(){ srch.focus(); }, 50); }
+    // Reset list filter
+    emAccDropFilter({ value:"" }, locId);
+  }
+}
+
+function emAccDropFilter(input, locId) {
+  var q     = (input.value || "").toLowerCase();
+  var items = document.querySelectorAll("#droplist_" + locId + " .em-acc-drop-item");
+  items.forEach(function(it) {
+    var name = it.querySelector("span") ? it.querySelector("span").textContent.toLowerCase() : "";
+    it.style.display = (!q || name.includes(q)) ? "" : "none";
+  });
+}
+
+function emToggleAccMap(loc, acc, locId) {
+  if (!_emLocMap[loc]) _emLocMap[loc] = [];
+  var idx = _emLocMap[loc].indexOf(acc);
+  if (idx > -1) _emLocMap[loc].splice(idx, 1);
+  else           _emLocMap[loc].push(acc);
+  // Update just this row's UI — no full re-render (prevents dropdown closing)
+  emUpdateLocRowUI(loc, locId);
+}
+
+function emAccSelAll(loc, locId, selectAll) {
+  var accounts = _cfg.account || [];
+  _emLocMap[loc] = selectAll ? [...accounts] : [];
+  emUpdateLocRowUI(loc, locId);
+  // Re-render the list items inside the open drop
+  var list = document.getElementById("droplist_" + locId);
+  if (!list) return;
+  var accounts2 = _cfg.account || [];
+  var mapped    = _emLocMap[loc] || [];
+  list.querySelectorAll(".em-acc-drop-item").forEach(function(item, i) {
+    var acc = accounts2[i];
+    var chk = acc && mapped.indexOf(acc) > -1;
+    var cb  = item.querySelector("input[type=checkbox]");
+    if (cb) cb.checked = chk;
+    item.classList.toggle("checked", chk);
+  });
+}
+
+function emUpdateLocRowUI(loc, locId) {
+  var mapped = _emLocMap[loc] || [];
+  // Update trigger label
+  var lbl = document.getElementById("triglabel_" + locId);
+  if (lbl) lbl.innerHTML = mapped.length
+    ? esc(mapped.join(", "))
+    : '<span style="color:var(--muted)">— Link to account(s) —</span>';
+  // Update count
+  var cnt = document.getElementById("dropcount_" + locId);
+  if (cnt) cnt.textContent = mapped.length + " selected";
+  // Update checkboxes in the open list
+  var list = document.getElementById("droplist_" + locId);
+  if (list) {
+    var accounts = _cfg.account || [];
+    list.querySelectorAll(".em-acc-drop-item").forEach(function(item, i) {
+      var acc = accounts[i];
+      var chk = acc && mapped.indexOf(acc) > -1;
+      var cb  = item.querySelector("input[type=checkbox]");
+      if (cb) cb.checked = chk;
+      item.classList.toggle("checked", chk);
+    });
+  }
+}
+
+function emLocRename(oldName, idx, newName) {
+  // Keep map in sync when location name is edited
+  newName = newName.trim();
+  _emList[idx] = newName;
+  if (oldName !== newName && _emLocMap[oldName] !== undefined) {
+    _emLocMap[newName] = _emLocMap[oldName];
+    delete _emLocMap[oldName];
+  }
+}
+
+function emRemoveLocAt(idx) {
+  var name = _emList[idx];
+  _emList.splice(idx, 1);
+  delete _emLocMap[name];
+  emRenderLocations();
+}
+
 function emCollect() {
+  if (_emTab === "location") {
+    // Location names come from _emList; mappings from _emLocMap — already live-updated
+    _emList = _emList.filter(function(v) { return v && v.trim(); });
+    return;
+  }
   var inputs = document.querySelectorAll("#em-list input[type='text']");
   inputs.forEach(function(inp) {
     var i = parseInt(inp.dataset.idx);
@@ -2799,41 +3284,14 @@ function emAdd() {
   if (_emList.indexOf(val) > -1) { toast("⚠ Already exists", "er"); return; }
   _emList.push(val);
   if (inp) inp.value = "";
-  emRender();
-  var el = document.getElementById("em-list");
-  if (el) el.scrollTop = el.scrollHeight;
-}
-
-function emRemove(idx) {
-  _emList.splice(idx, 1);
-  emRender();
-}
-
-async function emSave() {
-  // Collect current tab inputs
-  emCollect();
-  _cfg[_emTab] = [..._emList];
-
-  var btn = document.getElementById("emSaveBtn");
-  btn.innerHTML = '<span class="spin"></span>'; btn.disabled = true;
-  showLoading("Saving dropdowns…");
-  try {
-    var res = await api(authPayload({
-      action:          "saveConfig",
-      entities:        _cfg.entity   || [],
-      accountNames:    _cfg.account  || [],
-      serviceTypes:    _cfg.service  || [],
-      pickupLocations: _cfg.location || [],
-      statusValues:    _cfg.status   || [],
-    }));
-    if (!res.success) throw new Error(res.message);
-    toast("✅ Saved!", "ok");
-    closeOverlay("entityManagerOverlay");
-    loadDropdowns();
-  } catch(e) {
-    toast("❌ " + e.message, "er");
-  } finally {
-    btn.innerHTML = "<span>💾 Save</span>"; btn.disabled = false;
+  if (_emTab === "location") {
+    emRenderLocations();
+    var lp = document.getElementById("em-loc-panel");
+    if (lp) lp.scrollTop = lp.scrollHeight;
+  } else {
+    emRender();
+    var el = document.getElementById("em-list");
+    if (el) el.scrollTop = el.scrollHeight;
   }
 }
 
@@ -2924,6 +3382,109 @@ function applyStatusColor(sel){
 function esc(str){
   return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
+
+// ── SEARCHABLE DROPDOWN ENGINE ─────────────────────────────────
+// sdData: { [selectId]: [{ label, value }, …] }
+var sdData     = {};
+var sdOpenId   = null; // currently open dropdown id
+
+function sdRenderList(id, query) {
+  var listEl = document.getElementById("sd-" + id + "-list");
+  if (!listEl) return;
+  var opts = (sdData[id] || []).filter(function(o) {
+    return !query || o.label.toLowerCase().includes(query.toLowerCase());
+  });
+  if (!opts.length) {
+    listEl.innerHTML = '<div class="sd-no-results">No results found</div>';
+    return;
+  }
+  listEl.innerHTML = opts.map(function(o, i) {
+    var cls = "sd-option" + (o.value === "" ? " placeholder-opt" : "");
+    return '<div class="' + cls + '" data-value="' + esc(o.value) + '" onclick="sdSelect(\'' + id + '\',\'' + esc(o.value).replace(/'/g,"\\'") + '\',\'' + esc(o.label).replace(/'/g,"\\'") + '\')">' + esc(o.label) + '</div>';
+  }).join("");
+}
+
+function sdFilter(id, query) {
+  sdRenderList(id, query);
+}
+
+function sdOpen(id) {
+  // Close any other open dropdown
+  if (sdOpenId && sdOpenId !== id) sdClose(sdOpenId);
+  sdOpenId = id;
+  var drop = document.getElementById("sd-" + id + "-drop");
+  var disp = document.getElementById("sd-" + id + "-display");
+  if (drop) drop.classList.add("open");
+  if (disp) disp.classList.add("open");
+  // Clear search and re-render full list
+  var search = drop ? drop.querySelector(".sd-search") : null;
+  if (search) { search.value = ""; search.focus(); }
+  sdRenderList(id, "");
+}
+
+function sdClose(id) {
+  var drop = document.getElementById("sd-" + id + "-drop");
+  var disp = document.getElementById("sd-" + id + "-display");
+  if (drop) drop.classList.remove("open");
+  if (disp) disp.classList.remove("open");
+  if (sdOpenId === id) sdOpenId = null;
+}
+
+function sdSelect(id, value, label) {
+  // Update real select
+  var sel = document.getElementById(id);
+  if (sel) sel.value = value;
+  // Update display
+  var disp = document.getElementById("sd-" + id + "-display");
+  if (disp) {
+    disp.textContent = label;
+    disp.style.color = value ? "var(--text)" : "var(--muted)";
+  }
+  sdClose(id);
+  // Account → filter pickup locations
+  if (id === "c-account") onAccountChange(value);
+}
+
+function sdReset(id) {
+  var opts = sdData[id];
+  var placeholder = opts && opts[0] ? opts[0].label : "— Select —";
+  var disp = document.getElementById("sd-" + id + "-display");
+  if (disp) { disp.textContent = placeholder; disp.style.color = "var(--muted)"; }
+  var sel = document.getElementById(id);
+  if (sel) sel.value = "";
+  sdClose(id);
+}
+
+function sdKey(e, id) {
+  if (e.key === "Escape") sdClose(id);
+  if (e.key === "Enter") {
+    // Select highlighted or first option
+    var listEl = document.getElementById("sd-" + id + "-list");
+    if (!listEl) return;
+    var first = listEl.querySelector(".sd-option:not(.placeholder-opt)");
+    if (first) first.click();
+  }
+}
+
+// Close em-acc-drop when clicking outside any location row
+document.addEventListener("click", function(e) {
+  if (!_emOpenLocDrop) return;
+  var row = document.getElementById("row_" + _emOpenLocDrop);
+  if (row && !row.contains(e.target)) {
+    var drop = document.getElementById("drop_" + _emOpenLocDrop);
+    var trig = document.getElementById("trig_" + _emOpenLocDrop);
+    if (drop) drop.classList.remove("open");
+    if (trig) trig.classList.remove("open");
+    _emOpenLocDrop = null;
+  }
+});
+
+// Close searchable dropdown when clicking outside
+document.addEventListener("click", function(e) {
+  if (!sdOpenId) return;
+  var wrap = document.getElementById("sd-" + sdOpenId + "-wrap");
+  if (wrap && !wrap.contains(e.target)) sdClose(sdOpenId);
+});
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
