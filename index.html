@@ -1212,8 +1212,15 @@ body.admin-mode #toast {
       <!-- Template download hint -->
       <div style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--muted);">
         <strong style="color:var(--accent)">Required columns:</strong>
-        Entity · AccountName · ServiceType · Commodity · Boxes · Assigned · Date · Status
+        Entity · AccountName · Date · Status
+        <br/>
+        <strong style="color:var(--muted)">Optional columns:</strong>
+        ServiceType · Commodity · Boxes · Assigned · <strong style="color:var(--accent)">PickupLocation</strong> · Notes · DateRequested
         <br/><span style="font-size:11px;opacity:0.7">Column order does not matter. Extra columns are ignored.</span>
+        <br/><br/>
+        <button onclick="bulkDownloadTemplate()" style="background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);
+          color:var(--accent);border-radius:7px;padding:6px 14px;font-size:12px;font-weight:700;
+          cursor:pointer;font-family:var(--font);">⬇ Download Template (.xlsx)</button>
       </div>
       <!-- Drop zone -->
       <div class="photo-upload-area" id="bulkDropZone"
@@ -1852,10 +1859,8 @@ function closeUploadPreview() {
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-//const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwc2muKFY7Gd_kFQSrZIUF49cy2zaIfKgvsskWBa3rFttXsfs8uIQwxKwFSABEouSRE/exec";
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyABNUyxjM6WQhkdy4c1J9Bn2fNCntmlDq5soAOV8NIDO3LFHEPA9Kj2llQsseTfCjL/exec";
-
-
+//const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw5X6qvuPpgppd4ZAS0r9U0cZ7ajuqxVOPjuVnAj601hE2uiGaVbb9FzhTm7YJVWw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzNDpWmSuQVM7WUDppsYHpoHl2U1h-ODZxOZL0hu3DAB-cIY1p5TAsBsqFjRBAL7hm/exec"
 // ── STATE ──────────────────────────────────────────────────────
 let session      = { username:"", token:"", role:"", driverName:"", email:"" };
 let allShips     = [];
@@ -4157,7 +4162,7 @@ async function arcConfirmMove() {
 // ══════════════════════════════════════════════════════════════
 
 // Required columns (case-insensitive match)
-const BULK_COLS = ["Entity","AccountName","ServiceType","Commodity","Boxes","Assigned","Date","Status"];
+const BULK_COLS = ["Entity","AccountName","ServiceType","Commodity","Boxes","Assigned","Date","Status","PickupLocation"];
 
 let bulkRows = [];  // parsed rows ready to upload
 
@@ -4201,10 +4206,11 @@ function parseBulkFile(file) {
         if (match) keyMap[col] = match;
       });
 
-      // Validate required columns present
-      const missing = BULK_COLS.filter(c => !keyMap[c] && c !== "ServiceType" && c !== "Commodity");
+      // Validate required columns present (ServiceType, Commodity, Boxes, Assigned, PickupLocation, Notes, DateRequested are optional)
+      const REQUIRED = ["Entity","AccountName","Date","Status"];
+      const missing = REQUIRED.filter(c => !keyMap[c]);
       if (missing.length) {
-        toast("⚠ Missing columns: " + missing.join(", "),"er");
+        toast("⚠ Missing required columns: " + missing.join(", "),"er");
         bulkReset(); return;
       }
 
@@ -4267,9 +4273,13 @@ function renderBulkPreview() {
   // Preview table (first 5 rows)
   const preview5 = bulkRows.slice(0, 5);
   const cols = BULK_COLS;
-  const headerHtml = `<tr>${cols.map(c=>`<th>${c}</th>`).join("")}</tr>`;
+  const headerHtml = `<tr>${cols.map(c =>
+    `<th style="${c === 'PickupLocation' ? 'color:var(--accent);' : ''}">${c === 'PickupLocation' ? '📍 '+c : c}</th>`
+  ).join("")}</tr>`;
   const rowsHtml = preview5.map(r =>
-    `<tr>${cols.map(c=>`<td title="${esc(r[c])}">${esc(r[c]||"—")}</td>`).join("")}</tr>`
+    `<tr>${cols.map(c =>
+      `<td title="${esc(r[c])}" style="${c === 'PickupLocation' ? 'color:var(--accent);font-weight:600;' : ''}">${esc(r[c]||"—")}</td>`
+    ).join("")}</tr>`
   ).join("");
   document.getElementById("bulkPreviewTable").innerHTML =
     `<table class="bulk-table"><thead>${headerHtml}</thead><tbody>${rowsHtml}</tbody></table>`;
@@ -4336,6 +4346,18 @@ function bulkReset() {
   document.getElementById("bulkIco").textContent = "📊";
   document.getElementById("bulkTxt").innerHTML   = "Tap to select Excel or CSV file<br/><strong>or drag and drop here</strong>";
   document.getElementById("bulkFileInput").value = "";
+}
+
+function bulkDownloadTemplate() {
+  // Build a template xlsx with all columns including PickupLocation
+  const headers = ["Entity","AccountName","ServiceType","Commodity","Boxes","Assigned","Date","Status","PickupLocation","Notes","DateRequested"];
+  const example = ["Entity A","Account 1","Express","Electronics","10","driver1","2026-06-10","Pending","NO 1234, Main Street","Sample notes","2026-06-09"];
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+  // Style header row width hints
+  ws["!cols"] = headers.map(h => ({ wch: Math.max(h.length + 4, 16) }));
+  XLSX.utils.book_append_sheet(wb, ws, "Shipments");
+  XLSX.writeFile(wb, "bulk_upload_template.xlsx");
 }
 
 
