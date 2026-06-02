@@ -916,6 +916,21 @@ body.admin-mode #toast {
 .ci-stamp b{color:var(--green);}
 .co-stamp{font-size:11px;color:var(--muted);text-align:center;padding:3px 0;letter-spacing:.3px;}
 .co-stamp b{color:#ff6b35;}
+/* ── RECURRENCE ── */
+.recur-btn{
+  padding:7px 16px;border-radius:20px;font-size:12px;font-weight:700;
+  background:var(--card);border:1px solid var(--border);color:var(--muted);
+  cursor:pointer;transition:all 0.2s;font-family:var(--font);letter-spacing:0.3px;
+}
+.recur-btn:active{transform:scale(0.95);}
+.recur-btn.active{background:rgba(0,212,255,0.12);border-color:var(--accent);color:var(--accent);}
+.recur-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:10px;font-weight:700;letter-spacing:.5px;
+  padding:2px 8px;border-radius:20px;
+  background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.3);
+  color:var(--accent);white-space:nowrap;
+}
 </style>
 </head>
 <body>
@@ -1020,12 +1035,18 @@ body.admin-mode #toast {
 
   <!-- ── SHIPMENTS ── -->
   <div class="screen" id="screen-shipments">
-    <!-- Date filter bar -->
+    <!-- Quick filter pills -->
     <div class="date-filter-bar" id="ship-filter-bar">
       <button class="dfbtn" id="ship-btn-today" onclick="setDateFilter('today')">Today</button>
-      <button class="dfbtn active" id="ship-btn-all"   onclick="setDateFilter('all')">All</button>
-      <input  class="df-date-input" type="date" id="ship-date-pick"
-              onchange="setDateFilter(this.value)" title="Pick a specific date"/>
+      <button class="dfbtn active" id="ship-btn-all" onclick="setDateFilter('all')">All</button>
+    </div>
+    <!-- Always-visible FROM / TO date range -->
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+      <span style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;white-space:nowrap;">FROM</span>
+      <input class="df-date-input" type="date" id="ship-range-from" onchange="applyShipDateRange()" style="flex:1;min-width:120px;" title="From date"/>
+      <span style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;white-space:nowrap;">TO</span>
+      <input class="df-date-input" type="date" id="ship-range-to"   onchange="applyShipDateRange()" style="flex:1;min-width:120px;" title="To date"/>
+      <button class="dfbtn" id="ship-range-clear" onclick="clearShipDateRange()" style="padding:5px 10px;font-size:11px;display:none;">✕</button>
     </div>
     <div class="search-wrap">
       <span class="search-ico">🔍</span>
@@ -1134,6 +1155,21 @@ body.admin-mode #toast {
       </div>
       <div class="field"><label>Notes</label>
         <textarea id="c-notes" placeholder="Any additional notes…" style="resize:none;height:70px;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;line-height:1.5"></textarea>
+      </div>
+
+      <!-- Recurrence -->
+      <div class="field" id="recurField">
+        <label>🔁 Recurrence <span style="font-size:11px;color:var(--muted);font-weight:400">(Admin only)</span></label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+          <button type="button" class="recur-btn active" id="recur-None"     onclick="setRecur('None')">None</button>
+          <button type="button" class="recur-btn"        id="recur-Weekly"   onclick="setRecur('Weekly')">🔁 Weekly</button>
+          <button type="button" class="recur-btn"        id="recur-BiWeekly" onclick="setRecur('BiWeekly')">🔁 Bi-Weekly</button>
+          <button type="button" class="recur-btn"        id="recur-Monthly"  onclick="setRecur('Monthly')">🔁 Monthly</button>
+        </div>
+        <input type="hidden" id="c-recurrence" value=""/>
+        <div id="recurNote" style="display:none;margin-top:8px;padding:8px 12px;
+             background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.2);
+             border-radius:8px;font-size:12px;color:var(--accent)"></div>
       </div>
       <br/>
       <button class="btn btn-primary" id="createBtn" onclick="createShipment()"><span>Create Shipment</span></button>
@@ -1353,6 +1389,19 @@ body.admin-mode #toast {
     <div class="field"><label>Notes</label>
       <textarea id="e-Notes" placeholder="Any additional notes…" style="resize:none;height:70px;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;line-height:1.5"></textarea>
     </div>
+    <div class="field">
+      <label>🔁 Recurrence</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+        <button type="button" class="recur-btn active" id="erecur-None"     onclick="setEditRecur('None')">None</button>
+        <button type="button" class="recur-btn"        id="erecur-Weekly"   onclick="setEditRecur('Weekly')">🔁 Weekly</button>
+        <button type="button" class="recur-btn"        id="erecur-BiWeekly" onclick="setEditRecur('BiWeekly')">🔁 Bi-Weekly</button>
+        <button type="button" class="recur-btn"        id="erecur-Monthly"  onclick="setEditRecur('Monthly')">🔁 Monthly</button>
+      </div>
+      <input type="hidden" id="e-Recurrence" value=""/>
+      <div id="eRecurNote" style="display:none;margin-top:8px;padding:8px 12px;
+           background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.2);
+           border-radius:8px;font-size:12px;color:var(--accent)"></div>
+    </div>
     <div style="display:flex;gap:8px;margin-top:4px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeOverlay('editOverlay')">Cancel</button>
       <button class="btn btn-primary" style="flex:2" onclick="saveEdit()">Update</button>
@@ -1496,6 +1545,47 @@ body.admin-mode #toast {
       <button class="btn btn-primary" style="width:100%" onclick="cfgSave()"><span>💾 Save All Changes</span></button>
       <div id="cfgSaveStatus" style="font-size:12px;text-align:center;margin-top:8px;color:var(--muted)"></div>
     </div>
+
+    <!-- ── RECURRING SCHEDULE CARD ── -->
+    <div class="card" style="margin-top:14px;" id="scheduleCard">
+      <div class="card-title">🔁 Recurring Shipments Schedule</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.7;">
+        Controls when the daily trigger auto-creates recurring shipments.
+        The trigger runs once per day at the selected time (IST).
+      </p>
+
+      <!-- Status row -->
+      <div id="scheduleStatus" style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);
+           border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12px;line-height:1.8;">
+        <span style="color:var(--muted)">Loading schedule…</span>
+      </div>
+
+      <!-- Enable toggle -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);">Enable Auto-Scheduling</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Creates recurring entries automatically each day</div>
+        </div>
+        <button id="scheduleToggleBtn" onclick="toggleScheduleEnabled()"
+          style="min-width:64px;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;
+                 font-family:var(--font);cursor:pointer;border:1px solid var(--border);
+                 background:var(--surface);color:var(--muted);transition:all 0.2s;">
+          OFF
+        </button>
+      </div>
+
+      <!-- Hour picker -->
+      <div id="scheduleHourRow" style="margin-bottom:16px;">
+        <label style="font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.8px;
+               text-transform:uppercase;display:block;margin-bottom:8px;">Run Time (IST)</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;" id="scheduleHourGrid"></div>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%" id="scheduleSaveBtn" onclick="saveSchedule()">
+        <span>💾 Save Schedule</span>
+      </button>
+      <div id="scheduleSaveStatus" style="font-size:12px;text-align:center;margin-top:8px;color:var(--muted)"></div>
+    </div>
   </div>
 
 <!-- ── EDIT DRIVER MODAL ── -->
@@ -1527,103 +1617,95 @@ body.admin-mode #toast {
 <!-- ── USER MENU MODAL ── -->
 <!-- ── ENTITY MANAGER MODAL ── -->
 <div class="overlay" id="entityManagerOverlay">
-  <div class="modal">
+  <div class="modal" style="max-width:620px;width:calc(100% - 24px);">
     <div class="modal-handle"></div>
     <div class="modal-title">⚙ Manage Dropdowns</div>
-    <style>#entityManagerOverlay .modal{box-sizing:border-box;overflow:hidden}</style>
+    <style>
+      #entityManagerOverlay .modal{box-sizing:border-box;overflow:hidden}
+      #em-list::-webkit-scrollbar,#em-loc-panel::-webkit-scrollbar{width:5px}
+      #em-list::-webkit-scrollbar-track,#em-loc-panel::-webkit-scrollbar-track{background:transparent}
+      #em-list::-webkit-scrollbar-thumb,#em-loc-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px}
+      /* location table selects & inputs */
+      .loctbl select{
+        width:100%;
+        background:var(--surface);
+        border:none;
+        color:var(--text);
+        font-family:var(--font);
+        font-size:12px;
+        outline:none;
+        cursor:pointer;
+        -webkit-appearance:none;
+        appearance:none;
+        padding:8px 28px 8px 10px;
+        background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234a7a9b'/%3E%3C/svg%3E");
+        background-repeat:no-repeat;
+        background-position:right 8px center;
+      }
+      .loctbl select:focus{
+        background-color:var(--card);
+        outline:1px solid var(--accent);
+        border-radius:4px;
+      }
+      .loctbl select option{
+        background:var(--surface);
+        color:var(--text);
+      }
+      .loctbl input[type=text]{
+        width:100%;background:var(--surface);border:none;color:var(--text);
+        font-family:var(--font);font-size:12px;outline:none;padding:8px 10px;
+        box-sizing:border-box;
+      }
+      .loctbl input[type=text]:focus{
+        background:var(--card);
+        outline:1px solid var(--accent);
+        border-radius:4px;
+      }
+      .loctbl td{padding:0;border-bottom:1px solid var(--border);vertical-align:middle;}
+      .loctbl tr:last-child td{border-bottom:none;}
+      .loctbl tr:hover td{background:rgba(0,212,255,0.04);}
+      .loctbl tr:hover td select,.loctbl tr:hover td input[type=text]{background:var(--card);}
+      .loctbl .new-row td{background:rgba(0,212,255,0.06);border-top:2px solid rgba(0,212,255,0.35);}
+      .loctbl .new-row td select,.loctbl .new-row td input[type=text]{background:rgba(0,212,255,0.06);}
+      .loctbl .new-row td select:focus,.loctbl .new-row td input[type=text]:focus{background:var(--card);}
+      /* light theme override */
+      [data-theme="light"] .loctbl select,[data-theme="light"] .loctbl input[type=text]{background:#f0f4f8;color:#0a1a2e;}
+      [data-theme="light"] .loctbl select option{background:#f0f4f8;color:#0a1a2e;}
+      [data-theme="light"] .loctbl .new-row td select,[data-theme="light"] .loctbl .new-row td input{background:#e8f0f8;}
+    </style>
 
     <!-- Tab switcher -->
-    <div style="display:flex;gap:6px;margin-bottom:14px">
-      <button id="emTab-entity"  onclick="emSwitchTab('entity')"
-              style="flex:1;padding:8px 0;border-radius:8px;border:1px solid rgba(0,212,255,.3);
-                     background:rgba(0,212,255,.15);color:var(--accent);font-family:var(--font);
-                     font-size:12px;font-weight:700;cursor:pointer">🏢 Entity</button>
-      <button id="emTab-account" onclick="emSwitchTab('account')"
-              style="flex:1;padding:8px 0;border-radius:8px;border:1px solid var(--border);
-                     background:transparent;color:var(--muted);font-family:var(--font);
-                     font-size:12px;font-weight:700;cursor:pointer">🏦 Account</button>
-      <button id="emTab-service" onclick="emSwitchTab('service')"
-              style="flex:1;padding:8px 0;border-radius:8px;border:1px solid var(--border);
-                     background:transparent;color:var(--muted);font-family:var(--font);
-                     font-size:12px;font-weight:700;cursor:pointer">🚚 Service</button>
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <button id="emTab-entity"   onclick="emSwitchTab('entity')"
+        style="flex:1;padding:8px 0;border-radius:8px;border:1px solid rgba(0,212,255,.3);
+               background:rgba(0,212,255,.15);color:var(--accent);font-family:var(--font);
+               font-size:11px;font-weight:700;cursor:pointer">🏢 Entity</button>
+      <button id="emTab-account"  onclick="emSwitchTab('account')"
+        style="flex:1;padding:8px 0;border-radius:8px;border:1px solid var(--border);
+               background:transparent;color:var(--muted);font-family:var(--font);
+               font-size:11px;font-weight:700;cursor:pointer">🏦 Account</button>
+      <button id="emTab-service"  onclick="emSwitchTab('service')"
+        style="flex:1;padding:8px 0;border-radius:8px;border:1px solid var(--border);
+               background:transparent;color:var(--muted);font-family:var(--font);
+               font-size:11px;font-weight:700;cursor:pointer">🚚 Service</button>
       <button id="emTab-location" onclick="emSwitchTab('location')"
-              style="flex:1;padding:8px 0;border-radius:8px;border:1px solid var(--border);
-                     background:transparent;color:var(--muted);font-family:var(--font);
-                     font-size:12px;font-weight:700;cursor:pointer">📍 Location</button>
+        style="flex:1;padding:8px 0;border-radius:8px;border:1px solid var(--border);
+               background:transparent;color:var(--muted);font-family:var(--font);
+               font-size:11px;font-weight:700;cursor:pointer">📍 Location</button>
     </div>
 
-    <!-- Standard list (entity / account / service) -->
+    <!-- Entity / Account / Service list -->
     <div id="em-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;
-         max-height:240px;overflow-y:auto;overflow-x:hidden;
-         scrollbar-width:thin;scrollbar-color:var(--border) transparent;
-         padding-right:4px"></div>
-    <style>
-      #em-list::-webkit-scrollbar{width:5px}
-      #em-list::-webkit-scrollbar-track{background:transparent}
-      #em-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px}
-    </style>
+         max-height:220px;overflow-y:auto;overflow-x:hidden;
+         scrollbar-width:thin;scrollbar-color:var(--border) transparent;padding-right:4px"></div>
 
-    <!-- Location tab: per-location rows with account mapping -->
-    <div id="em-loc-panel" style="display:none;flex-direction:column;gap:8px;margin-bottom:12px;
-         max-height:280px;overflow-y:auto;overflow-x:hidden;
-         scrollbar-width:thin;scrollbar-color:var(--border) transparent;padding-right:4px"
-         id="em-loc-panel"></div>
-    <style>
-      #em-loc-panel::-webkit-scrollbar{width:5px}
-      #em-loc-panel::-webkit-scrollbar-track{background:transparent}
-      #em-loc-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px}
-      .em-loc-row{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;position:relative;}
-      .em-loc-name{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-      .em-loc-name input{flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);
-        color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;padding:2px 4px;outline:none;}
-      .em-loc-name input:focus{border-bottom-color:var(--accent);}
-      /* checkbox-dropdown trigger */
-      .em-acc-trigger{
-        display:flex;align-items:center;justify-content:space-between;
-        background:var(--card);border:1px solid var(--border);border-radius:8px;
-        padding:7px 11px;font-size:12px;color:var(--text);cursor:pointer;
-        transition:border-color .15s;user-select:none;gap:8px;
-      }
-      .em-acc-trigger:hover{border-color:var(--accent);}
-      .em-acc-trigger .trigger-label{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--font);}
-      .em-acc-trigger .trigger-arrow{color:var(--muted);font-size:10px;flex-shrink:0;transition:transform .2s;}
-      .em-acc-trigger.open .trigger-arrow{transform:rotate(180deg);}
-      /* dropdown panel */
-      .em-acc-drop{
-        display:none;position:absolute;left:12px;right:12px;z-index:600;
-        background:var(--card);border:1px solid var(--accent);border-radius:10px;
-        box-shadow:0 8px 24px rgba(0,0,0,.55);overflow:hidden;
-      }
-      .em-acc-drop.open{display:block;}
-      .em-acc-drop-search{
-        width:100%;background:var(--surface);border:none;border-bottom:1px solid var(--border);
-        padding:9px 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;
-      }
-      .em-acc-drop-search::placeholder{color:var(--muted);}
-      .em-acc-drop-list{max-height:160px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
-      .em-acc-drop-item{
-        display:flex;align-items:center;gap:10px;padding:9px 12px;
-        font-size:13px;font-family:var(--font);cursor:pointer;
-        border-bottom:1px solid rgba(26,58,92,.35);transition:background .1s;
-      }
-      .em-acc-drop-item:last-child{border-bottom:none;}
-      .em-acc-drop-item:hover{background:rgba(0,212,255,.07);}
-      .em-acc-drop-item input[type=checkbox]{
-        width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;
-      }
-      .em-acc-drop-item span{flex:1;color:var(--text);}
-      .em-acc-drop-item.checked span{color:var(--accent);font-weight:600;}
-      .em-acc-drop-footer{
-        padding:7px 12px;font-size:11px;color:var(--muted);
-        border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;
-        background:rgba(0,212,255,.03);
-      }
-      .em-acc-drop-selall{color:var(--accent);cursor:pointer;font-weight:600;font-size:11px;}
-      .em-acc-drop-selall:hover{text-decoration:underline;}
-    </style>
+    <!-- Location panel -->
+    <div id="em-loc-panel" style="display:none;flex-direction:column;gap:0;margin-bottom:12px;
+         max-height:420px;overflow-y:auto;overflow-x:hidden;
+         scrollbar-width:thin;scrollbar-color:var(--border) transparent;"></div>
 
-    <!-- Add new -->
-    <div style="display:flex;gap:8px;margin-bottom:14px;width:100%;box-sizing:border-box">
+    <!-- Add-new row  (hidden on Location tab) -->
+    <div id="em-add-row" style="display:flex;gap:8px;margin-bottom:14px;width:100%;box-sizing:border-box">
       <input type="text" id="em-input" placeholder="Add new value…"
              style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);
                     border-radius:8px;padding:10px 13px;color:var(--text);
@@ -1770,13 +1852,17 @@ function closeUploadPreview() {
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw5X6qvuPpgppd4ZAS0r9U0cZ7ajuqxVOPjuVnAj601hE2uiGaVbb9FzhTm7YJVWw/exec";
+//const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwc2muKFY7Gd_kFQSrZIUF49cy2zaIfKgvsskWBa3rFttXsfs8uIQwxKwFSABEouSRE/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyABNUyxjM6WQhkdy4c1J9Bn2fNCntmlDq5soAOV8NIDO3LFHEPA9Kj2llQsseTfCjL/exec";
+
 
 // ── STATE ──────────────────────────────────────────────────────
 let session      = { username:"", token:"", role:"", driverName:"", email:"" };
 let allShips     = [];
 let activeEntity = "All";
 let activeDateFilter = "all"; // "today" | "all" | "YYYY-MM-DD"
+let shipDateRangeFrom = ""; // "YYYY-MM-DD" | ""
+let shipDateRangeTo   = ""; // "YYYY-MM-DD" | ""
 
 // ── AUTH HELPER ────────────────────────────────────────────────
 function authPayload(extra) {
@@ -1952,14 +2038,18 @@ function enterApp() {
 // ── LOAD DROPDOWNS ─────────────────────────────────────────────
 // Global account→location map (populated by loadDropdowns)
 var _accountLocationMap = {};
+var _entityAccountMap   = {}; // { "Entity": ["Account1","Account2"] }
+var _entityForAccount   = {}; // { "AccountName": "EntityName" }
 
 async function loadDropdowns() {
   try {
     const res = await api(authPayload({ action:"getDropdowns" }));
     if (!res.success) return;
 
-    // Store map globally for form filtering
+    // Store maps globally for form filtering
     _accountLocationMap = res.accountLocationMap || {};
+    _entityAccountMap   = res.entityAccountMap   || {};
+    _entityForAccount   = res.entityForAccount   || {};
 
     // Helper to set both real select AND searchable dropdown
     function setSD(id, placeholder, opts) {
@@ -1973,6 +2063,11 @@ async function loadDropdowns() {
     }
 
     setSD("c-entity",   "— Select Entity —",       res.entities);
+
+    // Store master account list so we can restore it when entity is cleared
+    sdData["c-account-all"] = [{ label:"— Select Account —", value:"" }].concat(
+      res.accountNames.map(function(a){ return { label: a, value: a }; })
+    );
     setSD("c-account",  "— Select Account —",       res.accountNames);
     setSD("c-service",  "— Select Service Type —",  res.serviceTypes);
     setSD("c-assigned", "— Select Driver —",
@@ -2005,6 +2100,46 @@ async function loadDropdowns() {
     // Lock pickup until account is selected
     onAccountChange("");
   } catch(e) { console.error("Dropdown load failed:", e); }
+}
+
+// Called by sdSelect when Entity changes in New Shipment form
+function onEntityChange(entityValue) {
+  // Reset account and pickup downstream
+  sdReset("c-account");
+  onAccountChange("");
+
+  var disp = document.getElementById("sd-c-account-display");
+  var wrap = document.getElementById("sd-c-account-wrap");
+
+  if (!entityValue) {
+    // No entity — restore full account list
+    sdData["c-account"] = sdData["c-account-all"] ||
+      [{ label:"— Select Account —", value:"" }];
+    if (disp) { disp.textContent = "— Select Account —"; disp.style.color = "var(--muted)"; disp.style.opacity = ""; disp.style.pointerEvents = ""; }
+    if (wrap) wrap.title = "";
+  } else {
+    var eaMap    = _entityAccountMap || {};
+    var filtered = eaMap[entityValue] || [];
+    if (filtered.length) {
+      sdData["c-account"] = [{ label:"— Select Account —", value:"" }].concat(
+        filtered.map(function(a){ return { label: a, value: a }; })
+      );
+      // Also update the real <select>
+      var sel = document.getElementById("c-account");
+      if (sel) {
+        sel.innerHTML = '<option value="">— Select Account —</option>' +
+          filtered.map(function(a){ return '<option value="' + esc(a) + '">' + esc(a) + '</option>'; }).join("");
+      }
+      if (disp) { disp.textContent = "— Select Account —"; disp.style.color = "var(--muted)"; disp.style.opacity = ""; disp.style.pointerEvents = ""; }
+      if (wrap) wrap.title = "";
+    } else {
+      // Entity exists but has no accounts mapped yet — show full list as fallback
+      sdData["c-account"] = sdData["c-account-all"] ||
+        [{ label:"— Select Account —", value:"" }];
+      if (disp) { disp.textContent = "— Select Account —"; disp.style.color = "var(--muted)"; disp.style.opacity = ""; disp.style.pointerEvents = ""; }
+    }
+  }
+  sdRenderList("c-account", "");
 }
 
 // Called by sdSelect when Account changes in New Shipment form
@@ -2062,6 +2197,8 @@ function showTab(name) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.getElementById("screen-"+name).classList.add("active");
   document.getElementById("tab-"+name).classList.add("active");
+  // Load schedule settings when config tab is opened
+  if (name === "config") loadSchedule();
 }
 
 function refreshAll() { loadShipments(); toast("↻ Refreshed","in"); }
@@ -2156,7 +2293,9 @@ async function doCheckIn(shipmentId, actionType, btn) {
 
 function renderShipments(ships) {
   // Apply date filter first, then entity + search
-  let filtered = applyDateFilter(ships);
+  // For the Shipments tab: if range is active, use range filter; otherwise use activeDateFilter
+  var usingRange = !!(shipDateRangeFrom || shipDateRangeTo);
+  let filtered = applyDateFilter(ships, usingRange);
 
   const entities = ["All", ...new Set(ships.map(s=>s.Entity).filter(Boolean))];
   const tabsEl   = document.getElementById("entityTabs");
@@ -2208,6 +2347,7 @@ function renderShipments(ships) {
           <span class="status-badge ${sb}">${esc(s.Status||"—")}</span>
         </div>
         <div class="ship-meta">
+          ${s.Recurrence ?`<span class="recur-badge">🔁 ${esc(s.Recurrence)}</span>`:""}
           ${s.ServiceType?`<span class="chip">📋 ${esc(s.ServiceType)}</span>`:""}
           ${s.Commodity  ?`<span class="chip orange">📦 ${esc(s.Commodity)}</span>`:""}
           ${s.Boxes      ?`<span class="chip muted">🗃 ${esc(s.Boxes)} boxes</span>`:""}
@@ -2240,6 +2380,7 @@ function renderShipments(ships) {
 
   const cols = [
     { key:"_actions",       label:"",                 noSort:true },
+    { key:"Recurrence",     label:"Recurrence",       noSort:true },
     { key:"Entity",         label:"Entity" },
     { key:"AccountName",    label:"Account" },
     { key:"PickupLocation", label:"Pickup Location",  noSort:true },
@@ -2281,6 +2422,7 @@ function renderShipments(ships) {
           <button class="tbl-btn tbl-btn-del"  onclick="delShipment('${esc(s.ID)}',this)">🗑</button>
         </div>
       </td>
+      <td style="text-align:center">${s.Recurrence ? `<span class="recur-badge">🔁 ${esc(s.Recurrence)}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
       <td class="td-entity">${esc(s.Entity||"—")}</td>
       <td class="td-account td-white-bold">${esc(s.AccountName||"—")}</td>
       <td class="td-pickup">${s.PickupLocation ? esc(s.PickupLocation) : '<span style="color:var(--muted)">—</span>'}</td>
@@ -2302,6 +2444,7 @@ function renderShipments(ships) {
     <table class="admin-table">
       <colgroup>
         <col class="col-actions"/>
+        <col style="width:100px"/>
         <col class="col-entity"/><col class="col-account"/>
         <col class="col-pickup"/><col class="col-service"/><col class="col-commodity"/>
         <col class="col-date-req"/><col class="col-date"/><col class="col-status"/>
@@ -2404,8 +2547,20 @@ function normDateStr(raw) {
   return "";
 }
 
-// Filter shipments by activeDateFilter
-function applyDateFilter(ships) {
+// Filter shipments by activeDateFilter (or date range for Shipments tab)
+function applyDateFilter(ships, useRange) {
+  // Range filter (Shipments tab only)
+  if (useRange && (shipDateRangeFrom || shipDateRangeTo)) {
+    return ships.filter(function(s) {
+      var raw = s.Date || s.date || "";
+      if (!raw) return false;
+      var nd = normDateStr(String(raw));
+      if (!nd) return false;
+      if (shipDateRangeFrom && nd < shipDateRangeFrom) return false;
+      if (shipDateRangeTo   && nd > shipDateRangeTo)   return false;
+      return true;
+    });
+  }
   if (activeDateFilter === "all") return ships;
   const target = activeDateFilter === "today" ? todayISO() : normDateStr(activeDateFilter);
   if (!target) return ships;
@@ -2414,6 +2569,43 @@ function applyDateFilter(ships) {
     if (!raw) return false;
     return normDateStr(String(raw)) === target;
   });
+}
+
+
+function applyShipDateRange() {
+  shipDateRangeFrom = (document.getElementById("ship-range-from")||{}).value || "";
+  shipDateRangeTo   = (document.getElementById("ship-range-to")||{}).value   || "";
+  var hasRange = !!(shipDateRangeFrom || shipDateRangeTo);
+  // Show clear button when any date is set
+  var clr = document.getElementById("ship-range-clear");
+  if (clr) clr.style.display = hasRange ? "" : "none";
+  // Highlight date inputs when active
+  var fromEl = document.getElementById("ship-range-from");
+  var toEl   = document.getElementById("ship-range-to");
+  if (fromEl) fromEl.classList.toggle("active", !!shipDateRangeFrom);
+  if (toEl)   toEl.classList.toggle("active",   !!shipDateRangeTo);
+  // When a range is set, deactivate Today/All buttons
+  if (hasRange) {
+    var sbToday = document.getElementById("ship-btn-today");
+    var sbAll   = document.getElementById("ship-btn-all");
+    if (sbToday) sbToday.classList.remove("active");
+    if (sbAll)   sbAll.classList.remove("active");
+  } else {
+    // No range — restore "All" as default
+    activeDateFilter = "all";
+    syncDateFilterUI();
+  }
+  renderShipments(allShips);
+}
+
+function clearShipDateRange() {
+  shipDateRangeFrom = ""; shipDateRangeTo = "";
+  var f = document.getElementById("ship-range-from"); if (f) { f.value = ""; f.classList.remove("active"); }
+  var t = document.getElementById("ship-range-to");   if (t) { t.value = ""; t.classList.remove("active"); }
+  var clr = document.getElementById("ship-range-clear"); if (clr) clr.style.display = "none";
+  activeDateFilter = "all";
+  syncDateFilterUI();
+  renderShipments(allShips);
 }
 
 // Called by Today / All buttons and date picker
@@ -2443,16 +2635,17 @@ function syncDateFilterUI() {
     dbPick.max   = today;
   }
 
-  // Shipments bar
+  // Shipments bar — Today / All buttons; clear range inputs too
   const sbToday = document.getElementById("ship-btn-today");
   const sbAll   = document.getElementById("ship-btn-all");
-  const sbPick  = document.getElementById("ship-date-pick");
   if (sbToday) sbToday.classList.toggle("active", isToday);
-  if (sbAll)   sbAll.classList.toggle("active", isAll);
-  if (sbPick)  {
-    sbPick.classList.toggle("active", isCustom);
-    sbPick.value = isCustom ? activeDateFilter : "";
-    sbPick.max   = today;
+  if (sbAll)   sbAll.classList.toggle("active",   isAll);
+  // If we switched to Today/All, clear the range filter inputs
+  if (isToday || isAll) {
+    shipDateRangeFrom = ""; shipDateRangeTo = "";
+    var rf = document.getElementById("ship-range-from"); if (rf) { rf.value = ""; rf.classList.remove("active"); }
+    var rt = document.getElementById("ship-range-to");   if (rt) { rt.value = ""; rt.classList.remove("active"); }
+    var clr = document.getElementById("ship-range-clear"); if (clr) clr.style.display = "none";
   }
 }
 
@@ -2466,6 +2659,7 @@ async function createShipment() {
   const btn = document.getElementById("createBtn");
   btn.innerHTML='<span class="spin"></span>'; btn.disabled=true;
   showLoading("Creating shipment…");
+  const recurrence = (document.getElementById("c-recurrence")||{}).value || "";
   try {
     const res = await api(authPayload({
       action:"createShipment",
@@ -2480,15 +2674,14 @@ async function createShipment() {
       Status:      document.getElementById("c-status").value,
       PickupLocation: (document.getElementById("c-pickup")||{}).value||"",
       Notes:          (document.getElementById("c-notes")||{}).value||"",
+      Recurrence:  recurrence,
     }));
     if (res.success) {
       toast("✅ Shipment created: "+res.id,"ok");
-      sdReset("c-entity");
-      sdReset("c-account");
-      sdReset("c-assigned");
-      sdReset("c-service");
-      sdReset("c-pickup");
-      onAccountChange(""); // re-lock pickup
+      sdReset("c-entity"); sdReset("c-account");
+      sdReset("c-assigned"); sdReset("c-service"); sdReset("c-pickup");
+      onEntityChange("");  // restore full account list
+      onAccountChange(""); // lock pickup
       const cSt = document.getElementById("c-status");
       cSt.value = ""; cSt.classList.remove("green","yellow","red");
       document.getElementById("c-commodity").value = "";
@@ -2496,6 +2689,7 @@ async function createShipment() {
       document.getElementById("c-date").value     = todayISO();
       var dr = document.getElementById("c-date-requested"); if(dr) dr.value="";
       var nt = document.getElementById("c-notes");  if(nt) nt.value="";
+      setRecur("None"); // reset recurrence picker
       loadShipments(); showTab("shipments");
     } else throw new Error(res.message);
   } catch(e) { toast("❌ "+e.message,"er"); }
@@ -2505,18 +2699,49 @@ async function createShipment() {
 // ── EDIT (admin) ───────────────────────────────────────────────
 function openEdit(s) {
   document.getElementById("editShipId").textContent = s.ID;
-  ["ID","ServiceType","Commodity","Boxes","Status"].forEach(f=>{
-    const el=document.getElementById("e-"+f); if(el) el.value=s[f]||"";
+
+  // Helper: set a <select> value, inserting the option if it doesn't exist yet
+  function setSelect(id, val) {
+    var sel = document.getElementById(id);
+    if (!sel || val === undefined || val === null) return;
+    val = String(val).trim();
+    // Check if the option already exists
+    var exists = Array.from(sel.options).some(function(o){ return o.value === val; });
+    if (!exists && val) {
+      // Add it so the value always shows — loadDropdowns may not have run yet
+      var opt = document.createElement("option");
+      opt.value = val; opt.textContent = val;
+      sel.appendChild(opt);
+    }
+    sel.value = val;
+  }
+
+  // Plain text inputs
+  ["ID","Commodity","Boxes"].forEach(function(f){
+    var el = document.getElementById("e-"+f); if(el) el.value = s[f] || "";
   });
-  ["Entity","AccountName","Assigned"].forEach(f=>{
-    const el=document.getElementById("e-"+f); if(el) el.value=s[f]||"";
-  });
-  const dateEl=document.getElementById("e-Date");
-  if(dateEl){ dateEl.value = normDateStr(s.Date||""); }
-  const eSt=document.getElementById("e-Status");
-  if(eSt){ eSt.value=s.Status||""; applyStatusColor(eSt); }
-  var ePu=document.getElementById("e-PickupLocation"); if(ePu) ePu.value=s.PickupLocation||"";
-  var eNt=document.getElementById("e-Notes"); if(eNt) eNt.value=s.Notes||"";
+
+  // Selects that need option-injection
+  setSelect("e-Entity",       s.Entity      || "");
+  setSelect("e-AccountName",  s.AccountName || "");
+  setSelect("e-ServiceType",  s.ServiceType || "");
+  setSelect("e-Assigned",     s.Assigned    || "");
+  setSelect("e-PickupLocation", s.PickupLocation || "");
+
+  // Date
+  var dateEl = document.getElementById("e-Date");
+  if (dateEl) dateEl.value = normDateStr(s.Date || "");
+
+  // Status
+  var eSt = document.getElementById("e-Status");
+  if (eSt) { eSt.value = s.Status || ""; applyStatusColor(eSt); }
+
+  // Notes
+  var eNt = document.getElementById("e-Notes"); if(eNt) eNt.value = s.Notes || "";
+
+  // Recurrence
+  setEditRecur(s.Recurrence || "None");
+
   document.getElementById("editOverlay").classList.add("open");
 }
 
@@ -2526,6 +2751,9 @@ async function saveEdit() {
   ["ID","Entity","AccountName","ServiceType","Commodity","Boxes","Date","Assigned","Status","PickupLocation","Notes"].forEach(f=>{
     const el=document.getElementById("e-"+f); if(el) payload[f]=el.value.trim();
   });
+  // Recurrence
+  const eRecur = document.getElementById("e-Recurrence");
+  if (eRecur) payload["Recurrence"] = eRecur.value === "None" ? "" : eRecur.value;
   try {
     const res = await api(payload);
     if(res.success){ toast("✅ Shipment updated","ok"); closeOverlay("editOverlay"); loadShipments(); }
@@ -2935,6 +3163,128 @@ async function cfgSave() {
     if (statusEl) statusEl.textContent = "❌ " + e.message;
   } finally {
     if (btn) { btn.innerHTML = "<span>💾 Save All Changes</span>"; btn.disabled = false; }
+    hideLoading();
+  }
+}
+
+// ── RECURRING SCHEDULE CONTROLS ───────────────────────────────
+var _scheduleEnabled = true;
+var _scheduleHour    = 6;
+
+var _hourLabels = [
+  "12 AM","1 AM","2 AM","3 AM","4 AM","5 AM","6 AM","7 AM","8 AM","9 AM","10 AM","11 AM",
+  "12 PM","1 PM","2 PM","3 PM","4 PM","5 PM","6 PM","7 PM","8 PM","9 PM","10 PM","11 PM"
+];
+
+async function loadSchedule() {
+  var card = document.getElementById("scheduleCard");
+  if (!card) return;
+  try {
+    var res = await api(authPayload({ action:"getSchedule" }));
+    if (!res.success) throw new Error(res.message || "Failed");
+    _scheduleEnabled = res.enabled !== false;
+    _scheduleHour    = typeof res.hour === "number" ? res.hour : 6;
+    _renderScheduleStatus(res);
+    _renderScheduleToggle();
+    _renderHourGrid();
+  } catch(e) {
+    var st = document.getElementById("scheduleStatus");
+    if (st) st.innerHTML = '<span style="color:var(--red)">⚠ Could not load schedule: ' + esc(e.message) + '</span>';
+  }
+}
+
+function _renderScheduleStatus(res) {
+  var el = document.getElementById("scheduleStatus");
+  if (!el) return;
+  var installed = res.triggerInstalled;
+  var rows = [
+    '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">',
+      '<span style="color:var(--muted);font-weight:600;">Trigger status</span>',
+      installed
+        ? '<span style="color:#2ecc71;font-weight:700;">● Installed</span>'
+        : '<span style="color:var(--red);font-weight:700;">● Not installed</span>',
+    '</div>',
+    res.lastRun
+      ? '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">' +
+          '<span style="color:var(--muted);">Last ran</span>' +
+          '<span style="color:var(--text);">' + esc(res.lastRun) + '</span>' +
+        '</div>'
+      : '',
+    res.lastCreated
+      ? '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">' +
+          '<span style="color:var(--muted);">Trigger installed at</span>' +
+          '<span style="color:var(--text);">' + esc(res.lastCreated) + '</span>' +
+        '</div>'
+      : '',
+    !installed
+      ? '<div style="margin-top:6px;font-size:11px;color:var(--muted);">Run <code style="color:var(--accent)">installRecurringTrigger()</code> once from Apps Script editor, then set schedule here.</div>'
+      : '',
+  ];
+  el.innerHTML = rows.join('');
+}
+
+function _renderScheduleToggle() {
+  var btn = document.getElementById("scheduleToggleBtn");
+  if (!btn) return;
+  btn.textContent  = _scheduleEnabled ? "ON" : "OFF";
+  btn.style.background = _scheduleEnabled ? "rgba(0,212,255,0.15)" : "var(--surface)";
+  btn.style.color      = _scheduleEnabled ? "var(--accent)"        : "var(--muted)";
+  btn.style.border     = _scheduleEnabled ? "1px solid var(--accent)" : "1px solid var(--border)";
+}
+
+function _renderHourGrid() {
+  var grid = document.getElementById("scheduleHourGrid");
+  if (!grid) return;
+  var h = [];
+  for (var i = 0; i < 24; i++) {
+    var active = (i === _scheduleHour);
+    h.push(
+      '<button type="button" onclick="selectScheduleHour(' + i + ')" ' +
+      'style="padding:7px 10px;border-radius:8px;font-size:11px;font-weight:700;' +
+      'font-family:var(--font);cursor:pointer;transition:all 0.15s;min-width:52px;' +
+      'background:' + (active ? 'rgba(0,212,255,0.15)' : 'var(--surface)') + ';' +
+      'color:'      + (active ? 'var(--accent)' : 'var(--muted)') + ';' +
+      'border:1px solid ' + (active ? 'var(--accent)' : 'var(--border)') + ';">' +
+      _hourLabels[i] + '</button>'
+    );
+  }
+  grid.innerHTML = h.join('');
+}
+
+function toggleScheduleEnabled() {
+  _scheduleEnabled = !_scheduleEnabled;
+  _renderScheduleToggle();
+}
+
+function selectScheduleHour(h) {
+  _scheduleHour = h;
+  _renderHourGrid();
+}
+
+async function saveSchedule() {
+  var btn      = document.getElementById("scheduleSaveBtn");
+  var statusEl = document.getElementById("scheduleSaveStatus");
+  if (btn) { btn.innerHTML = '<span class="spin"></span>'; btn.disabled = true; }
+  showLoading("Saving schedule…");
+  try {
+    var res = await api(authPayload({
+      action:   "saveSchedule",
+      enabled:  _scheduleEnabled,
+      hour:     _scheduleHour,
+    }));
+    if (!res.success) throw new Error(res.message || "Save failed");
+    toast("✅ " + res.message, "ok");
+    if (statusEl) statusEl.innerHTML =
+      '✅ Saved — runs daily at <strong style="color:var(--accent)">' +
+      _hourLabels[_scheduleHour] + ' IST</strong>';
+    // Refresh status row
+    loadSchedule();
+  } catch(e) {
+    toast("❌ " + e.message, "er");
+    if (statusEl) statusEl.textContent = "❌ " + e.message;
+  } finally {
+    if (btn) { btn.innerHTML = "<span>💾 Save Schedule</span>"; btn.disabled = false; }
+    hideLoading();
   }
 }
 
@@ -2953,17 +3303,19 @@ function openEntityManager() {
     _cfg.service  = res.serviceTypes   ? [...res.serviceTypes]   : [];
     _cfg.location = res.pickupLocations? [...res.pickupLocations]: [];
     _cfg.accountLocationMap = res.accountLocationMap || {};
+    _cfg.entityAccountMap   = res.entityAccountMap   || {};
+    _cfg.entityForAccount   = res.entityForAccount   || {}; // { "AccountName": "EntityName" }
 
-    // Build _emLocMap: inverted index from accountLocationMap
-    // { "AccountA": ["Loc1","Loc2"] } → { "Loc1":["AccountA"], "Loc2":["AccountA"] }
+    // _emLocMap is { "AccountName": ["Loc1","Loc2"] } — same as accountLocationMap
     _emLocMap = {};
     Object.entries(_cfg.accountLocationMap).forEach(function(pair) {
-      var acc = pair[0], locs = pair[1];
-      locs.forEach(function(loc) {
-        if (!_emLocMap[loc]) _emLocMap[loc] = [];
-        if (_emLocMap[loc].indexOf(acc) === -1) _emLocMap[loc].push(acc);
-      });
+      _emLocMap[pair[0]] = pair[1] ? [...pair[1]] : [];
     });
+    _emFlattenRows(); // build flat _emRows from _emLocMap
+
+    // Reset new-row cascading selectors
+    _emSelEntity  = "";
+    _emSelAccount = "";
 
     _emList = [..._cfg.entity];
     emRefresh();
@@ -2973,10 +3325,10 @@ function openEntityManager() {
 
 function emSwitchTab(tab) {
   if (_emTab === tab) return;
-  emCollect(); // save current tab state into _emList
+  emCollect(); // flush current tab's DOM into _emList / _emRows
   _cfg[_emTab] = [..._emList];
-  // When leaving location tab, persist the current mapping into _cfg
   if (_emTab === "location") {
+    // emCollect() already updated _cfg.location and _emLocMap
     _cfg.accountLocationMap = _emLocMapToAccountMap();
   }
   _emTab = tab;
@@ -2989,29 +3341,65 @@ function emRemove(idx) {
   emRender();
 }
 
-// Convert _emLocMap { "Loc":["Acc1","Acc2"] } → accountLocationMap { "Acc1":["Loc",…] }
+// _emLocMap is now { "AccountName": ["Loc1","Loc2"] } — same as accountLocationMap
+// Just return a clean copy
 function _emLocMapToAccountMap() {
   var out = {};
   Object.entries(_emLocMap).forEach(function(pair) {
-    var loc = pair[0], accs = pair[1];
-    accs.forEach(function(acc) {
-      if (!out[acc]) out[acc] = [];
-      if (out[acc].indexOf(loc) === -1) out[acc].push(loc);
-    });
+    var acc = pair[0], locs = pair[1];
+    if (locs && locs.length) out[acc] = locs.filter(function(l){ return l && l.trim(); });
   });
   return out;
 }
 
 async function emSave() {
+  // 1. Flush all live DOM edits into _emList / _emRows / _emLocMap
   emCollect();
   _cfg[_emTab] = [..._emList];
 
-  // Always build accountLocationMap from _emLocMap (the live working copy).
-  // If the user never opened the Location tab this session, _emLocMap was
-  // populated from the server on openEntityManager, so it is always current.
+  // 2. Ensure _cfg.location is always fresh
+  if (_emTab !== "location") {
+    var locList = [];
+    Object.values(_emLocMap).forEach(function(locs) {
+      (locs || []).forEach(function(l){ if (l && !locList.includes(l)) locList.push(l); });
+    });
+    _cfg.location = locList;
+  }
+
+  // 3. Build accountLocationMap from _emLocMap
   var accountLocationMap = _emLocMapToAccountMap();
-  // Also persist into _cfg so it survives tab switches within the same session
   _cfg.accountLocationMap = accountLocationMap;
+
+  // 4. Build entityAccountMap and entityForAccount from _emRows
+  var entityAccountMap = {};
+  var entityForAccount = {};   // { "AccountName": "EntityName" } — the key persistence map
+  _emRows.forEach(function(r) {
+    if (!r.account) return;
+    if (r.entity) {
+      // entityAccountMap
+      if (!entityAccountMap[r.entity]) entityAccountMap[r.entity] = [];
+      if (!entityAccountMap[r.entity].includes(r.account)) entityAccountMap[r.entity].push(r.account);
+      // entityForAccount
+      entityForAccount[r.account] = r.entity;
+    }
+  });
+  // Merge in existing entity-account pairs that may not have locations yet
+  var existingEA = _cfg.entityAccountMap || _entityAccountMap || {};
+  Object.keys(existingEA).forEach(function(ent) {
+    (existingEA[ent] || []).forEach(function(acc) {
+      if (!entityAccountMap[ent]) entityAccountMap[ent] = [];
+      if (!entityAccountMap[ent].includes(acc)) entityAccountMap[ent].push(acc);
+      if (!entityForAccount[acc]) entityForAccount[acc] = ent;
+    });
+  });
+  var existingEFA = _cfg.entityForAccount || {};
+  Object.keys(existingEFA).forEach(function(acc) {
+    if (!entityForAccount[acc]) entityForAccount[acc] = existingEFA[acc];
+  });
+
+  _cfg.entityAccountMap = entityAccountMap;
+  _cfg.entityForAccount = entityForAccount;
+  _entityAccountMap     = entityAccountMap;
 
   var btn = document.getElementById("emSaveBtn");
   btn.innerHTML = '<span class="spin"></span>'; btn.disabled = true;
@@ -3025,8 +3413,10 @@ async function emSave() {
       pickupLocations:    _cfg.location  || [],
       statusValues:       _cfg.status    || [],
       accountLocationMap: accountLocationMap,
+      entityAccountMap:   entityAccountMap,
+      entityForAccount:   entityForAccount,
     }));
-    if (!res.success) throw new Error(res.message);
+    if (!res.success) throw new Error(res.message || "Save failed");
     toast("✅ Saved!", "ok");
     closeOverlay("entityManagerOverlay");
     loadDropdowns();
@@ -3034,6 +3424,7 @@ async function emSave() {
     toast("❌ " + e.message, "er");
   } finally {
     btn.innerHTML = "<span>💾 Save</span>"; btn.disabled = false;
+    hideLoading();
   }
 }
 
@@ -3047,6 +3438,12 @@ function emRefresh() {
     btn.style.color      = active ? "var(--accent)"       : "var(--muted)";
     btn.style.border     = active ? "1px solid rgba(0,212,255,.3)" : "1px solid var(--border)";
   });
+
+  // Show/hide add-row — Location tab manages its own add UI inside the panel
+  var addRow = document.getElementById("em-add-row");
+  if (addRow) addRow.style.display = (_emTab === "location") ? "none" : "flex";
+
+  // Update placeholder
   var inp = document.getElementById("em-input");
   if (inp) inp.placeholder = "Add new " + (_emLabel[_emTab] || "value") + "…";
 
@@ -3054,11 +3451,11 @@ function emRefresh() {
   var locPanel     = document.getElementById("em-loc-panel");
   if (_emTab === "location") {
     if (standardList) standardList.style.display = "none";
-    if (locPanel)     locPanel.style.display      = "flex";
+    if (locPanel)     { locPanel.style.display = "flex"; locPanel.style.flexDirection = "column"; }
     emRenderLocations();
   } else {
     if (standardList) standardList.style.display = "flex";
-    if (locPanel)     locPanel.style.display      = "none";
+    if (locPanel)     locPanel.style.display = "none";
     emRender();
   }
 }
@@ -3088,187 +3485,293 @@ function emRender() {
   }).join("");
 }
 
-// ── Location tab: per-row with checkbox-dropdown Account mapping ─
-var _emLocMap    = {}; // { "LocationName": ["AccountA", "AccountB", …] }
-var _emOpenLocDrop = null; // loc name whose dropdown is currently open
+// ── Location tab — flat editable table ───────────────────────────
+// _emLocMap : { "AccountName": ["Loc1","Loc2"] }
+// _emRows   : flat working array [ {entity,account,loc} ] — one row per location
+var _emLocMap     = {};
+var _emRows       = [];   // working flat rows
+var _emSelEntity  = "";   // new-row entity selector state
+var _emSelAccount = "";   // new-row account selector state
+
+/* Flatten _emLocMap → _emRows using entityForAccount for entity lookup */
+function _emFlattenRows() {
+  // Build merged entityForAccount from all sources (most specific first)
+  var efa = {};
+  // 1. Global (from last loadDropdowns)
+  Object.assign(efa, _entityForAccount || {});
+  // 2. cfg (from last openEntityManager fetch)
+  Object.assign(efa, _cfg.entityForAccount || {});
+  // 3. Derive from entityAccountMap as fallback
+  var eaMap = _cfg.entityAccountMap || _entityAccountMap || {};
+  Object.keys(eaMap).forEach(function(ent) {
+    (eaMap[ent] || []).forEach(function(acc) {
+      if (!efa[acc]) efa[acc] = ent;
+    });
+  });
+
+  _emRows = [];
+  Object.keys(_emLocMap).forEach(function(acc) {
+    (_emLocMap[acc] || []).forEach(function(loc) {
+      if (loc && loc.trim()) {
+        _emRows.push({ entity: efa[acc] || "", account: acc, loc: loc });
+      }
+    });
+  });
+  _emRows.sort(function(a, b) {
+    return (a.entity||"").localeCompare(b.entity||"") ||
+           a.account.localeCompare(b.account) ||
+           a.loc.localeCompare(b.loc);
+  });
+}
+
+/* Write _emRows back into _emLocMap */
+function _emRowsToLocMap() {
+  _emLocMap = {};
+  _emRows.forEach(function(r) {
+    if (!r.account || !r.loc) return;
+    if (!_emLocMap[r.account]) _emLocMap[r.account] = [];
+    if (!_emLocMap[r.account].includes(r.loc)) _emLocMap[r.account].push(r.loc);
+  });
+}
 
 function emRenderLocations() {
   var el = document.getElementById("em-loc-panel");
   if (!el) return;
 
-  var locs     = _emList;
-  var accounts = _cfg.account || [];
+  var entities    = _cfg.entity  || [];
+  var allAccounts = _cfg.account || [];
+  var eaMap       = _cfg.entityAccountMap || _entityAccountMap || {};
 
-  if (!locs.length) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">No locations yet — add one below</div>';
-    return;
-  }
+  // Accounts for the new-entry row:
+  // If entity chosen → filtered; otherwise show ALL accounts so user can pick freely
+  var newRowAccounts = _emSelEntity
+    ? (eaMap[_emSelEntity] || allAccounts)
+    : allAccounts;
 
-  el.innerHTML = locs.map(function(loc, i) {
-    var mapped  = _emLocMap[loc] || [];
-    var label   = mapped.length
-      ? mapped.join(", ")
-      : '<span style="color:var(--muted)">— Link to account(s) —</span>';
-    var locId   = "emloc_" + i; // stable id per row position
+  var h = [];
 
-    var itemsHTML = accounts.length
-      ? accounts.map(function(acc) {
-          var chk = mapped.indexOf(acc) > -1;
-          return '<label class="em-acc-drop-item' + (chk ? " checked" : "") + '" ' +
-                 'onclick="emToggleAccMap(\'' + esc(loc).replace(/'/g,"\\'") + '\',\'' + esc(acc).replace(/'/g,"\\'") + '\',\'' + locId + '\')">' +
-                 '<input type="checkbox"' + (chk ? " checked" : "") + ' readonly onclick="return false"/>' +
-                 '<span>' + esc(acc) + '</span>' +
-                 '</label>';
-        }).join("")
-      : '<div style="padding:10px 12px;font-size:12px;color:var(--muted)">No accounts added yet</div>';
+  h.push('<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">');
+  h.push('<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">');
+  h.push('<table class="loctbl" style="width:100%;border-collapse:collapse;min-width:460px;">');
+  h.push('<colgroup>' +
+    '<col style="width:22%;min-width:110px"/>' +
+    '<col style="width:26%;min-width:120px"/>' +
+    '<col style="width:42%;min-width:150px"/>' +
+    '<col style="width:10%;min-width:44px"/>' +
+  '</colgroup>');
 
-    return '<div class="em-loc-row" id="row_' + locId + '">' +
-           '  <div class="em-loc-name">' +
-           '    <span style="font-size:15px">📍</span>' +
-           '    <input type="text" value="' + esc(loc) + '" data-idx="' + i + '" ' +
-           '      style="flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);' +
-           '      color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;padding:2px 4px;outline:none" ' +
-           '      oninput="emLocRename(\'' + esc(loc).replace(/'/g,"\\'") + '\',' + i + ',this.value)" ' +
-           '      onfocus="this.style.borderBottomColor=\'var(--accent)\'" ' +
-           '      onblur="this.style.borderBottomColor=\'var(--border)\'"/>' +
-           '    <button onclick="emRemoveLocAt(' + i + ')" ' +
-           '      style="background:rgba(255,71,87,0.12);border:1px solid rgba(255,71,87,0.25);' +
-           '      color:var(--red);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;flex-shrink:0">✕</button>' +
-           '  </div>' +
-           '  <div style="font-size:10px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px">📌 Linked Accounts</div>' +
-           '  <div class="em-acc-trigger" id="trig_' + locId + '" onclick="emAccDropToggle(\'' + esc(loc).replace(/'/g,"\\'") + '\',\'' + locId + '\')">' +
-           '    <span class="trigger-label" id="triglabel_' + locId + '">' + label + '</span>' +
-           '    <span class="trigger-arrow">▼</span>' +
-           '  </div>' +
-           '  <div class="em-acc-drop" id="drop_' + locId + '">' +
-           '    <input class="em-acc-drop-search" placeholder="🔍 Search accounts…" ' +
-           '      oninput="emAccDropFilter(this,\'' + locId + '\')" ' +
-           '      onclick="event.stopPropagation()"/>' +
-           '    <div class="em-acc-drop-list" id="droplist_' + locId + '">' + itemsHTML + '</div>' +
-           '    <div class="em-acc-drop-footer">' +
-           '      <span id="dropcount_' + locId + '" style="font-size:11px;color:var(--muted)">' +
-           '        ' + mapped.length + ' selected' +
-           '      </span>' +
-           '      <span class="em-acc-drop-selall" onclick="emAccSelAll(\'' + esc(loc).replace(/'/g,"\\'") + '\',\'' + locId + '\',true)">Select all</span>' +
-           '      &nbsp;·&nbsp;' +
-           '      <span class="em-acc-drop-selall" onclick="emAccSelAll(\'' + esc(loc).replace(/'/g,"\\'") + '\',\'' + locId + '\',false)">Clear</span>' +
-           '    </div>' +
-           '  </div>' +
-           '</div>';
-  }).join("");
-}
+  // Header
+  var TH = 'style="padding:8px 10px;font-size:10px;font-weight:700;letter-spacing:.9px;' +
+            'text-transform:uppercase;color:var(--accent);text-align:left;' +
+            'background:rgba(0,212,255,0.08);border-bottom:1px solid var(--border);white-space:nowrap;"';
+  h.push('<thead><tr>');
+  h.push('<th ' + TH + '>Entity</th>');
+  h.push('<th ' + TH + '>Account</th>');
+  h.push('<th ' + TH + '>Pickup Location</th>');
+  h.push('<th ' + TH + '></th>');
+  h.push('</tr></thead>');
 
-function emAccDropToggle(loc, locId) {
-  var drop  = document.getElementById("drop_" + locId);
-  var trig  = document.getElementById("trig_" + locId);
-  if (!drop) return;
-  var isOpen = drop.classList.contains("open");
-  // Close any other open drop first
-  if (_emOpenLocDrop && _emOpenLocDrop !== locId) {
-    var prevDrop = document.getElementById("drop_" + _emOpenLocDrop);
-    var prevTrig = document.getElementById("trig_" + _emOpenLocDrop);
-    if (prevDrop) prevDrop.classList.remove("open");
-    if (prevTrig) prevTrig.classList.remove("open");
-  }
-  if (isOpen) {
-    drop.classList.remove("open");
-    if (trig) trig.classList.remove("open");
-    _emOpenLocDrop = null;
+  h.push('<tbody id="em-loc-tbody">');
+
+  if (_emRows.length === 0) {
+    h.push('<tr><td colspan="4" style="padding:16px 12px;text-align:center;color:var(--muted);font-size:12px;background:var(--surface);">No pickup locations yet — fill in the row below</td></tr>');
   } else {
-    drop.classList.add("open");
-    if (trig) trig.classList.add("open");
-    _emOpenLocDrop = locId;
-    // Focus search
-    var srch = drop.querySelector(".em-acc-drop-search");
-    if (srch) { srch.value = ""; setTimeout(function(){ srch.focus(); }, 50); }
-    // Reset list filter
-    emAccDropFilter({ value:"" }, locId);
-  }
-}
+    _emRows.forEach(function(row, ri) {
+      var bg = (ri % 2 === 1) ? 'background:rgba(255,255,255,0.015);' : '';
 
-function emAccDropFilter(input, locId) {
-  var q     = (input.value || "").toLowerCase();
-  var items = document.querySelectorAll("#droplist_" + locId + " .em-acc-drop-item");
-  items.forEach(function(it) {
-    var name = it.querySelector("span") ? it.querySelector("span").textContent.toLowerCase() : "";
-    it.style.display = (!q || name.includes(q)) ? "" : "none";
-  });
-}
+      // Accounts to show in this row's account dropdown
+      var rowAccounts = (row.entity && row.entity !== '—')
+        ? (eaMap[row.entity] || allAccounts)
+        : allAccounts;
 
-function emToggleAccMap(loc, acc, locId) {
-  if (!_emLocMap[loc]) _emLocMap[loc] = [];
-  var idx = _emLocMap[loc].indexOf(acc);
-  if (idx > -1) _emLocMap[loc].splice(idx, 1);
-  else           _emLocMap[loc].push(acc);
-  // Update just this row's UI — no full re-render (prevents dropdown closing)
-  emUpdateLocRowUI(loc, locId);
-}
+      h.push('<tr id="emrow-' + ri + '" style="' + bg + '">');
 
-function emAccSelAll(loc, locId, selectAll) {
-  var accounts = _cfg.account || [];
-  _emLocMap[loc] = selectAll ? [...accounts] : [];
-  emUpdateLocRowUI(loc, locId);
-  // Re-render the list items inside the open drop
-  var list = document.getElementById("droplist_" + locId);
-  if (!list) return;
-  var accounts2 = _cfg.account || [];
-  var mapped    = _emLocMap[loc] || [];
-  list.querySelectorAll(".em-acc-drop-item").forEach(function(item, i) {
-    var acc = accounts2[i];
-    var chk = acc && mapped.indexOf(acc) > -1;
-    var cb  = item.querySelector("input[type=checkbox]");
-    if (cb) cb.checked = chk;
-    item.classList.toggle("checked", chk);
-  });
-}
+      // ── Entity dropdown ──────────────────────────────────────
+      h.push('<td><select onchange="emLocRowEditEntity(' + ri + ',this.value)" title="' + esc(row.entity) + '">');
+      h.push('<option value="">— Entity —</option>');
+      // If entity is set but not in list (e.g. eaMap not loaded), force-show it
+      if (row.entity && row.entity !== '—' && !entities.includes(row.entity)) {
+        h.push('<option value="' + esc(row.entity) + '" selected>' + esc(row.entity) + '</option>');
+      }
+      entities.forEach(function(e) {
+        h.push('<option value="' + esc(e) + '"' + (e === row.entity ? ' selected' : '') + '>' + esc(e) + '</option>');
+      });
+      h.push('</select></td>');
 
-function emUpdateLocRowUI(loc, locId) {
-  var mapped = _emLocMap[loc] || [];
-  // Update trigger label
-  var lbl = document.getElementById("triglabel_" + locId);
-  if (lbl) lbl.innerHTML = mapped.length
-    ? esc(mapped.join(", "))
-    : '<span style="color:var(--muted)">— Link to account(s) —</span>';
-  // Update count
-  var cnt = document.getElementById("dropcount_" + locId);
-  if (cnt) cnt.textContent = mapped.length + " selected";
-  // Update checkboxes in the open list
-  var list = document.getElementById("droplist_" + locId);
-  if (list) {
-    var accounts = _cfg.account || [];
-    list.querySelectorAll(".em-acc-drop-item").forEach(function(item, i) {
-      var acc = accounts[i];
-      var chk = acc && mapped.indexOf(acc) > -1;
-      var cb  = item.querySelector("input[type=checkbox]");
-      if (cb) cb.checked = chk;
-      item.classList.toggle("checked", chk);
+      // ── Account dropdown ─────────────────────────────────────
+      h.push('<td><select onchange="emLocRowEditAccount(' + ri + ',this.value)" title="' + esc(row.account) + '">');
+      h.push('<option value=""></option>');
+      rowAccounts.forEach(function(a) {
+        h.push('<option value="' + esc(a) + '"' + (a === row.account ? ' selected' : '') + '>' + esc(a) + '</option>');
+      });
+      if (row.account && !rowAccounts.includes(row.account)) {
+        h.push('<option value="' + esc(row.account) + '" selected>' + esc(row.account) + '</option>');
+      }
+      h.push('</select></td>');
+
+      // ── Pickup location text ─────────────────────────────────
+      h.push('<td><input type="text" value="' + esc(row.loc) + '" ' +
+        'onblur="emLocRowEditLoc(' + ri + ',this.value)" ' +
+        'onchange="emLocRowEditLoc(' + ri + ',this.value)"/></td>');
+
+      // ── Delete ───────────────────────────────────────────────
+      h.push('<td style="text-align:center;' + bg + '">');
+      h.push('<button onclick="emLocRowDelete(' + ri + ')" title="Delete" ' +
+        'style="background:none;border:none;color:var(--red);font-size:18px;' +
+        'cursor:pointer;padding:5px 10px;opacity:0.5;line-height:1;">×</button>');
+      h.push('</td></tr>');
     });
   }
+
+  // ── New-entry row ─────────────────────────────────────────────
+  h.push('<tr class="new-row" id="em-loc-newrow">');
+
+  // Entity
+  h.push('<td><select id="em-new-entity" onchange="emLocNewEntityChange(this.value)">');
+  h.push('<option value="">Entity…</option>');
+  entities.forEach(function(e) {
+    h.push('<option value="' + esc(e) + '"' + (e === _emSelEntity ? ' selected' : '') + '>' + esc(e) + '</option>');
+  });
+  h.push('</select></td>');
+
+  // Account (cascade — always enabled, filtered by entity if one is selected)
+  h.push('<td><select id="em-new-account" onchange="emLocNewAccountChange(this.value)">');
+  h.push('<option value="">Account…</option>');
+  newRowAccounts.forEach(function(a) {
+    h.push('<option value="' + esc(a) + '"' + (a === _emSelAccount ? ' selected' : '') + '>' + esc(a) + '</option>');
+  });
+  h.push('</select></td>');
+
+  // Location name (enabled once account chosen)
+  h.push('<td><input type="text" id="em-new-loc" ' +
+    'placeholder="' + (_emSelAccount ? 'Pickup location name…' : 'Pick account first…') + '" ' +
+    (!_emSelAccount ? 'disabled ' : '') +
+    'style="opacity:' + (_emSelAccount ? '1' : '0.5') + '" ' +
+    'onkeydown="if(event.key===\'Enter\')emLocNewAddRow()"/></td>');
+
+  // Add button
+  h.push('<td style="text-align:center;">');
+  h.push('<button onclick="emLocNewAddRow()" ' +
+    'style="background:rgba(0,212,255,0.15);border:1px solid rgba(0,212,255,0.35);' +
+    'color:var(--accent);font-size:15px;font-weight:700;' +
+    'border-radius:6px;padding:3px 10px;cursor:pointer;">+</button>');
+  h.push('</td></tr>');
+
+  h.push('</tbody></table></div></div>');
+  el.innerHTML = h.join('');
 }
 
-function emLocRename(oldName, idx, newName) {
-  // Keep map in sync when location name is edited
-  newName = newName.trim();
-  _emList[idx] = newName;
-  if (oldName !== newName && _emLocMap[oldName] !== undefined) {
-    _emLocMap[newName] = _emLocMap[oldName];
-    delete _emLocMap[oldName];
+
+/* ── Row-level edit handlers ─────────────────────────────── */
+function emLocRowEditEntity(ri, newEnt) {
+  if (!_emRows[ri]) return;
+  _emRows[ri].entity = newEnt || "—";
+  // When entity changes, reset account if it no longer belongs to this entity
+  var eaMap = _cfg.entityAccountMap || _entityAccountMap || {};
+  var validAccs = eaMap[newEnt] || [];
+  if (validAccs.length && !validAccs.includes(_emRows[ri].account)) {
+    _emRows[ri].account = "";
   }
-}
-
-function emRemoveLocAt(idx) {
-  var name = _emList[idx];
-  _emList.splice(idx, 1);
-  delete _emLocMap[name];
+  _emRowsToLocMap();
   emRenderLocations();
 }
 
+function emLocRowEditAccount(ri, newAcc) {
+  if (!_emRows[ri]) return;
+  _emRows[ri].account = newAcc;
+  _emRowsToLocMap();
+}
+
+function emLocRowEditLoc(ri, newLoc) {
+  if (!_emRows[ri]) return;
+  _emRows[ri].loc = newLoc.trim();
+  _emRowsToLocMap();
+}
+
+function emLocRowDelete(ri) {
+  _emRows.splice(ri, 1);
+  _emRowsToLocMap();
+  emRenderLocations();
+}
+
+/* ── New-row handlers ────────────────────────────────────── */
+function emLocNewEntityChange(val) {
+  _emSelEntity  = val;
+  _emSelAccount = "";
+  emRenderLocations();
+}
+
+function emLocNewAccountChange(val) {
+  _emSelAccount = val;
+  emRenderLocations();
+}
+
+function emLocNewAddRow() {
+  var locEl = document.getElementById("em-new-loc");
+  var loc   = locEl ? locEl.value.trim() : "";
+  if (!_emSelAccount) { toast("⚠ Select an Account",     "er"); return; }
+  if (!loc)           { toast("⚠ Enter a location name", "er"); return; }
+
+  // Auto-derive entity from account if not explicitly chosen
+  var entity = _emSelEntity;
+  if (!entity) {
+    var eaMap = _cfg.entityAccountMap || _entityAccountMap || {};
+    Object.keys(eaMap).forEach(function(ent) {
+      if ((eaMap[ent] || []).includes(_emSelAccount)) entity = ent;
+    });
+    entity = entity || "—";
+  }
+
+  // Duplicate check
+  var dup = _emRows.some(function(r){ return r.account === _emSelAccount && r.loc === loc; });
+  if (dup) { toast("⚠ Already exists", "er"); return; }
+
+  _emRows.push({ entity: entity, account: _emSelAccount, loc: loc });
+  _emRowsToLocMap();
+  if (!_emList.includes(loc)) _emList.push(loc);
+  if (locEl) locEl.value = "";
+  emRenderLocations();
+  var ni = document.getElementById("em-new-loc");
+  if (ni) { ni.disabled = false; setTimeout(function(){ ni.focus(); }, 40); }
+  toast("📍 Added", "ok");
+}
+
+// Legacy stubs (kept so older call-sites don't error)
+function emLocAddItem(val)           { emLocNewAddRow(); }
+function emLocQuickAdd(acc, inp)     {}
+function emLocEntityChange(val)      { emLocNewEntityChange(val); }
+function emLocAccountChange(val)     { emLocNewAccountChange(val); }
+function emLocRenameItem(acc,i,v)    { /* live via onblur/onchange in table row */ }
+function emLocRemoveItem(acc, idx)   {
+  var ri = _emRows.findIndex(function(r){ return r.account===acc && _emLocMap[acc] && _emLocMap[acc][idx]===r.loc; });
+  if (ri > -1) emLocRowDelete(ri);
+}
+
+
 function emCollect() {
   if (_emTab === "location") {
-    // Location names come from _emList; mappings from _emLocMap — already live-updated
-    _emList = _emList.filter(function(v) { return v && v.trim(); });
+    // Flush ALL live DOM values from every existing table row into _emRows
+    _emRows.forEach(function(row, ri) {
+      var tr = document.getElementById("emrow-" + ri);
+      if (!tr) return;
+      var selects = tr.querySelectorAll("select");
+      var inputs  = tr.querySelectorAll("input[type='text']");
+      if (selects[0]) row.entity  = selects[0].value || "";
+      if (selects[1]) row.account = selects[1].value || "";
+      if (inputs[0])  row.loc     = inputs[0].value.trim();
+    });
+    // Remove rows with no account or no location
+    _emRows = _emRows.filter(function(r){ return r.account && r.loc; });
+    // Write back into _emLocMap
+    _emRowsToLocMap();
+    // Rebuild flat pickupLocations list
+    var allLocs = [];
+    _emRows.forEach(function(r){ if (r.loc && !allLocs.includes(r.loc)) allLocs.push(r.loc); });
+    _emList = allLocs;
+    _cfg.location = allLocs;
     return;
   }
+  // Entity / Account / Service tabs — read inline text inputs
   var inputs = document.querySelectorAll("#em-list input[type='text']");
   inputs.forEach(function(inp) {
     var i = parseInt(inp.dataset.idx);
@@ -3280,18 +3783,56 @@ function emCollect() {
 function emAdd() {
   var inp = document.getElementById("em-input");
   var val = inp ? inp.value.trim() : "";
+  if (_emTab === "location") {
+    emLocNewAddRow(); // location tab manages its own new-row UI
+    if (inp) inp.value = "";
+    return;
+  }
   if (!val) { toast("⚠ Enter a value", "er"); return; }
   if (_emList.indexOf(val) > -1) { toast("⚠ Already exists", "er"); return; }
   _emList.push(val);
   if (inp) inp.value = "";
-  if (_emTab === "location") {
-    emRenderLocations();
-    var lp = document.getElementById("em-loc-panel");
-    if (lp) lp.scrollTop = lp.scrollHeight;
-  } else {
-    emRender();
-    var el = document.getElementById("em-list");
-    if (el) el.scrollTop = el.scrollHeight;
+  emRender();
+  var el = document.getElementById("em-list");
+  if (el) el.scrollTop = el.scrollHeight;
+}
+
+// ── RECURRENCE HELPERS ─────────────────────────────────────────
+const RECUR_LABELS = {
+  "None":"",
+  "Weekly":"🔁 Weekly — next entry auto-created every 7 days",
+  "BiWeekly":"🔁 Bi-Weekly — next entry auto-created every 14 days",
+  "Monthly":"🔁 Monthly — next entry auto-created on same date next month"
+};
+
+function setRecur(val) {
+  ["None","Weekly","BiWeekly","Monthly"].forEach(function(k){
+    var b = document.getElementById("recur-"+k);
+    if (b) b.classList.toggle("active", k === val);
+  });
+  var inp = document.getElementById("c-recurrence");
+  if (inp) inp.value = (val === "None") ? "" : val;
+  var note = document.getElementById("recurNote");
+  if (note) {
+    var label = RECUR_LABELS[val] || "";
+    note.style.display = label ? "" : "none";
+    note.textContent = label;
+  }
+}
+
+function setEditRecur(val) {
+  if (!val || val === "") val = "None";
+  ["None","Weekly","BiWeekly","Monthly"].forEach(function(k){
+    var b = document.getElementById("erecur-"+k);
+    if (b) b.classList.toggle("active", k === val);
+  });
+  var inp = document.getElementById("e-Recurrence");
+  if (inp) inp.value = (val === "None") ? "" : val;
+  var note = document.getElementById("eRecurNote");
+  if (note) {
+    var label = RECUR_LABELS[val] || "";
+    note.style.display = label ? "" : "none";
+    note.textContent = label;
   }
 }
 
@@ -3441,7 +3982,8 @@ function sdSelect(id, value, label) {
     disp.style.color = value ? "var(--text)" : "var(--muted)";
   }
   sdClose(id);
-  // Account → filter pickup locations
+  // Entity → filter accounts; Account → filter pickup locations
+  if (id === "c-entity")  onEntityChange(value);
   if (id === "c-account") onAccountChange(value);
 }
 
@@ -3465,19 +4007,6 @@ function sdKey(e, id) {
     if (first) first.click();
   }
 }
-
-// Close em-acc-drop when clicking outside any location row
-document.addEventListener("click", function(e) {
-  if (!_emOpenLocDrop) return;
-  var row = document.getElementById("row_" + _emOpenLocDrop);
-  if (row && !row.contains(e.target)) {
-    var drop = document.getElementById("drop_" + _emOpenLocDrop);
-    var trig = document.getElementById("trig_" + _emOpenLocDrop);
-    if (drop) drop.classList.remove("open");
-    if (trig) trig.classList.remove("open");
-    _emOpenLocDrop = null;
-  }
-});
 
 // Close searchable dropdown when clicking outside
 document.addEventListener("click", function(e) {
