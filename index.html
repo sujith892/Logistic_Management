@@ -1624,14 +1624,27 @@ body.admin-mode #toast {
 <!-- ── USER MENU MODAL ── -->
 <!-- ── ENTITY MANAGER MODAL ── -->
 <div class="overlay" id="entityManagerOverlay">
-  <div class="modal" style="max-width:620px;width:calc(100% - 24px);">
+  <div class="modal" style="max-width:620px;width:calc(100% - 24px);display:flex;flex-direction:column;height:80dvh;max-height:80dvh;">
     <div class="modal-handle"></div>
     <div class="modal-title">⚙ Manage Dropdowns</div>
     <style>
-      #entityManagerOverlay .modal{box-sizing:border-box;overflow:hidden}
+      #entityManagerOverlay .modal{box-sizing:border-box;overflow:hidden;min-height:0}
       #em-list::-webkit-scrollbar,#em-loc-panel::-webkit-scrollbar{width:5px}
       #em-list::-webkit-scrollbar-track,#em-loc-panel::-webkit-scrollbar-track{background:transparent}
       #em-list::-webkit-scrollbar-thumb,#em-loc-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px}
+      /* Custom always-on scrollbar (native OS/mobile scrollbars auto-hide and
+         can't be forced visible via CSS alone, so we draw our own indicator) */
+      .em-scroll-wrap{position:relative;box-sizing:border-box;overflow:hidden}
+      .em-scroll-track{
+        position:absolute;top:2px;bottom:2px;right:1px;width:3px;
+        background:rgba(255,255,255,0.07);border-radius:999px;
+        pointer-events:none;z-index:2;
+      }
+      [data-theme="light"] .em-scroll-track{background:rgba(0,0,0,0.09);}
+      .em-scroll-thumb{
+        position:absolute;left:0;right:0;top:0;min-height:20px;
+        background:var(--border);border-radius:999px;pointer-events:none;
+      }
       /* location table selects & inputs */
       .loctbl select{
         width:100%;
@@ -1679,10 +1692,12 @@ body.admin-mode #toast {
       [data-theme="light"] .loctbl select,[data-theme="light"] .loctbl input[type=text]{background:#f0f4f8;color:#0a1a2e;}
       [data-theme="light"] .loctbl select option{background:#f0f4f8;color:#0a1a2e;}
       [data-theme="light"] .loctbl .new-row td select,[data-theme="light"] .loctbl .new-row td input{background:#e8f0f8;}
+      #em-loc-search:focus{border-color:var(--accent);}
+      [data-theme="light"] #em-loc-search{background:#f0f4f8;color:#0a1a2e;}
     </style>
 
     <!-- Tab switcher -->
-    <div style="display:flex;gap:6px;margin-bottom:12px">
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex:0 0 auto">
       <button id="emTab-entity"   onclick="emSwitchTab('entity')"
         style="flex:1;padding:8px 0;border-radius:8px;border:1px solid rgba(0,212,255,.3);
                background:rgba(0,212,255,.15);color:var(--accent);font-family:var(--font);
@@ -1702,17 +1717,31 @@ body.admin-mode #toast {
     </div>
 
     <!-- Entity / Account / Service list -->
-    <div id="em-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;
-         max-height:220px;overflow-y:auto;overflow-x:hidden;
-         scrollbar-width:thin;scrollbar-color:var(--border) transparent;padding-right:4px"></div>
+    <div class="em-scroll-wrap" id="em-list-wrap" style="flex:1 1 auto;min-height:80px;margin-bottom:12px;display:flex;">
+      <div id="em-list" style="display:flex;flex-direction:column;gap:8px;width:100%;
+           height:100%;overflow-y:auto;overflow-x:hidden;box-sizing:border-box;padding-right:8px"></div>
+      <div class="em-scroll-track"><div class="em-scroll-thumb" id="em-list-thumb"></div></div>
+    </div>
 
     <!-- Location panel -->
-    <div id="em-loc-panel" style="display:none;flex-direction:column;gap:0;margin-bottom:12px;
-         max-height:420px;overflow-y:auto;overflow-x:hidden;
-         scrollbar-width:thin;scrollbar-color:var(--border) transparent;"></div>
+    <div id="em-loc-wrap" style="flex:1 1 auto;min-height:80px;margin-bottom:12px;display:none;
+         flex-direction:column;">
+      <input type="text" id="em-loc-search" placeholder="🔍 Search entity, account, or location…"
+             oninput="emLocSearchChange(this.value)"
+             style="flex:0 0 auto;margin-bottom:8px;background:var(--surface);border:1px solid var(--border);
+                    border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--font);
+                    font-size:13px;outline:none;box-sizing:border-box;width:100%"/>
+      <div class="em-scroll-wrap" style="flex:1 1 auto;min-height:0;">
+        <div id="em-loc-panel" style="display:flex;flex-direction:column;gap:0;width:100%;
+             height:100%;overflow-y:auto;overflow-x:hidden;box-sizing:border-box;padding-right:8px"></div>
+        <div class="em-scroll-track"><div class="em-scroll-thumb" id="em-loc-thumb"></div></div>
+      </div>
+      <!-- Frozen "add new" row — always visible, never scrolls away -->
+      <div id="em-loc-newrow-panel" style="flex:0 0 auto;margin-top:8px;"></div>
+    </div>
 
     <!-- Add-new row  (hidden on Location tab) -->
-    <div id="em-add-row" style="display:flex;gap:8px;margin-bottom:14px;width:100%;box-sizing:border-box">
+    <div id="em-add-row" style="display:flex;gap:8px;margin-bottom:14px;width:100%;box-sizing:border-box;flex:0 0 auto">
       <input type="text" id="em-input" placeholder="Add new value…"
              style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);
                     border-radius:8px;padding:10px 13px;color:var(--text);
@@ -1721,7 +1750,7 @@ body.admin-mode #toast {
       <button class="btn btn-primary" style="flex:0 0 80px;padding:0;font-size:13px" onclick="emAdd()">+ Add</button>
     </div>
 
-    <div style="display:flex;gap:8px;margin-top:4px">
+    <div style="display:flex;gap:8px;margin-top:4px;flex:0 0 auto">
       <button class="btn btn-ghost" style="flex:1" onclick="closeOverlay('entityManagerOverlay')">Cancel</button>
       <button class="btn btn-primary" style="flex:2" id="emSaveBtn" onclick="emSave()">
         <span>💾 Save</span>
@@ -1860,8 +1889,7 @@ function closeUploadPreview() {
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
 //const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw5X6qvuPpgppd4ZAS0r9U0cZ7ajuqxVOPjuVnAj601hE2uiGaVbb9FzhTm7YJVWw/exec";
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw85BxSSBrutzsZX6XlIhGu1TTnfhxKhulT9Q88_fflLp7WeqdYz9A1AmMFm4utsfrd/exec"
-
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw85BxSSBrutzsZX6XlIhGu1TTnfhxKhulT9Q88_fflLp7WeqdYz9A1AmMFm4utsfrd/exec";
 // ── STATE ──────────────────────────────────────────────────────
 let session      = { username:"", token:"", role:"", driverName:"", email:"" };
 let allShips     = [];
@@ -3322,10 +3350,13 @@ function openEntityManager() {
     // Reset new-row cascading selectors
     _emSelEntity  = "";
     _emSelAccount = "";
+    _emLocSearch  = "";
+    var searchInp = document.getElementById("em-loc-search");
+    if (searchInp) searchInp.value = "";
 
     _emList = [..._cfg.entity];
-    emRefresh();
     document.getElementById("entityManagerOverlay").classList.add("open");
+    emRefresh();
   }).catch(function(e) { toast("❌ " + e.message, "er"); });
 }
 
@@ -3453,24 +3484,72 @@ function emRefresh() {
   var inp = document.getElementById("em-input");
   if (inp) inp.placeholder = "Add new " + (_emLabel[_emTab] || "value") + "…";
 
-  var standardList = document.getElementById("em-list");
-  var locPanel     = document.getElementById("em-loc-panel");
+  var listWrap = document.getElementById("em-list-wrap");
+  var locWrap  = document.getElementById("em-loc-wrap");
   if (_emTab === "location") {
-    if (standardList) standardList.style.display = "none";
-    if (locPanel)     { locPanel.style.display = "flex"; locPanel.style.flexDirection = "column"; }
+    if (listWrap) listWrap.style.display = "none";
+    if (locWrap)  locWrap.style.display  = "flex";
     emRenderLocations();
   } else {
-    if (standardList) standardList.style.display = "flex";
-    if (locPanel)     locPanel.style.display = "none";
+    if (listWrap) listWrap.style.display = "flex";
+    if (locWrap)  locWrap.style.display  = "none";
     emRender();
   }
 }
+
+// Always-visible custom scrollbar thumb — sizes/positions itself to reflect
+// scroll position. Native OS/mobile scrollbars auto-hide when idle and can't
+// be forced persistently visible via CSS, so we draw this ourselves.
+function emUpdateScrollThumb(panelId, thumbId) {
+  var panel = document.getElementById(panelId);
+  var thumb = document.getElementById(thumbId);
+  if (!panel || !thumb) return;
+  var track = thumb.parentElement;
+  var trackH = track.clientHeight;
+  var viewH  = panel.clientHeight;
+  var contentH = panel.scrollHeight;
+  if (trackH <= 0 || contentH <= 0) { thumb.style.display = "none"; return; }
+  thumb.style.display = "block";
+  var thumbH = Math.min(trackH, Math.max(20, trackH * (viewH / contentH)));
+  var maxTop = trackH - thumbH;
+  var scrollable = contentH - viewH;
+  var ratio = scrollable > 0 ? (panel.scrollTop / scrollable) : 0;
+  thumb.style.height = thumbH + "px";
+  thumb.style.top     = (maxTop * ratio) + "px";
+}
+
+// Wire up live scroll tracking for the custom thumbs (elements exist in the
+// initial markup, so this only needs to run once).
+(function() {
+  var lst = document.getElementById("em-list");
+  var loc = document.getElementById("em-loc-panel");
+  if (lst) lst.addEventListener("scroll", function(){ emUpdateScrollThumb("em-list", "em-list-thumb"); });
+  if (loc) loc.addEventListener("scroll", function(){ emUpdateScrollThumb("em-loc-panel", "em-loc-thumb"); });
+
+  // The Location tab's rows are almost entirely <select> elements. Browsers
+  // often intercept mouse-wheel scrolling while the cursor is over a <select>
+  // (to avoid accidentally changing its value) instead of scrolling the
+  // panel — so the wheel appears to "do nothing" unless the pointer happens
+  // to be over blank space. We take over wheel handling at the panel level
+  // and apply the scroll ourselves so it works no matter what's under the
+  // cursor.
+  function forwardWheel(panel) {
+    if (!panel) return;
+    panel.addEventListener("wheel", function(e) {
+      panel.scrollTop += e.deltaY;
+      e.preventDefault();
+    }, { passive: false });
+  }
+  forwardWheel(lst);
+  forwardWheel(loc);
+})();
 
 function emRender() {
   var el = document.getElementById("em-list");
   if (!el) return;
   if (_emList.length === 0) {
     el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">No values yet — add one below</div>';
+    emUpdateScrollThumb("em-list", "em-list-thumb");
     return;
   }
   var icon = _emIcon[_emTab] || "•";
@@ -3489,6 +3568,7 @@ function emRender() {
            'color:var(--red);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;flex-shrink:0">✕</button>' +
            '</div>';
   }).join("");
+  emUpdateScrollThumb("em-list", "em-list-thumb");
 }
 
 // ── Location tab — flat editable table ───────────────────────────
@@ -3498,6 +3578,7 @@ var _emLocMap     = {};
 var _emRows       = [];   // working flat rows
 var _emSelEntity  = "";   // new-row entity selector state
 var _emSelAccount = "";   // new-row account selector state
+var _emLocSearch  = "";   // Location tab search/filter text
 
 /* Flatten _emLocMap → _emRows using entityForAccount for entity lookup */
 function _emFlattenRows() {
@@ -3540,9 +3621,15 @@ function _emRowsToLocMap() {
   });
 }
 
+function emLocSearchChange(val) {
+  _emLocSearch = val || "";
+  emRenderLocations();
+}
+
 function emRenderLocations() {
-  var el = document.getElementById("em-loc-panel");
-  if (!el) return;
+  var el    = document.getElementById("em-loc-panel");
+  var elNew = document.getElementById("em-loc-newrow-panel");
+  if (!el || !elNew) return;
 
   var entities    = _cfg.entity  || [];
   var allAccounts = _cfg.account || [];
@@ -3552,17 +3639,20 @@ function emRenderLocations() {
   // regardless of which entity is selected.
   var newRowAccounts = allAccounts;
 
+  var COLGROUP = '<colgroup>' +
+    '<col style="width:22%;min-width:110px"/>' +
+    '<col style="width:26%;min-width:120px"/>' +
+    '<col style="width:42%;min-width:150px"/>' +
+    '<col style="width:10%;min-width:44px"/>' +
+  '</colgroup>';
+
+  /* ── Scrollable table: existing rows only ─────────────────────── */
   var h = [];
 
   h.push('<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">');
   h.push('<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">');
   h.push('<table class="loctbl" style="width:100%;border-collapse:collapse;min-width:460px;">');
-  h.push('<colgroup>' +
-    '<col style="width:22%;min-width:110px"/>' +
-    '<col style="width:26%;min-width:120px"/>' +
-    '<col style="width:42%;min-width:150px"/>' +
-    '<col style="width:10%;min-width:44px"/>' +
-  '</colgroup>');
+  h.push(COLGROUP);
 
   // Header
   var TH = 'style="padding:8px 10px;font-size:10px;font-weight:700;letter-spacing:.9px;' +
@@ -3577,10 +3667,24 @@ function emRenderLocations() {
 
   h.push('<tbody id="em-loc-tbody">');
 
+  var q = _emLocSearch.trim().toLowerCase();
+  var visibleRows = [];
+  _emRows.forEach(function(row, ri) {
+    if (!q ||
+        (row.entity  || "").toLowerCase().indexOf(q) > -1 ||
+        (row.account || "").toLowerCase().indexOf(q) > -1 ||
+        (row.loc     || "").toLowerCase().indexOf(q) > -1) {
+      visibleRows.push({ row: row, ri: ri });
+    }
+  });
+
   if (_emRows.length === 0) {
     h.push('<tr><td colspan="4" style="padding:16px 12px;text-align:center;color:var(--muted);font-size:12px;background:var(--surface);">No pickup locations yet — fill in the row below</td></tr>');
+  } else if (visibleRows.length === 0) {
+    h.push('<tr><td colspan="4" style="padding:16px 12px;text-align:center;color:var(--muted);font-size:12px;background:var(--surface);">No matches for "' + esc(_emLocSearch) + '"</td></tr>');
   } else {
-    _emRows.forEach(function(row, ri) {
+    visibleRows.forEach(function(item) {
+      var row = item.row, ri = item.ri;
       var bg = (ri % 2 === 1) ? 'background:rgba(255,255,255,0.015);' : '';
 
       // Accounts to show in this row's account dropdown — always the full list
@@ -3625,45 +3729,54 @@ function emRenderLocations() {
     });
   }
 
-  // ── New-entry row ─────────────────────────────────────────────
-  h.push('<tr class="new-row" id="em-loc-newrow">');
+  h.push('</tbody></table></div></div>');
+  el.innerHTML = h.join('');
+  emUpdateScrollThumb("em-loc-panel", "em-loc-thumb");
+
+  /* ── Frozen footer: the "add new" row, its own tiny table so the ─────
+     columns line up with the scrollable table above, but it never
+     scrolls out of view. ──────────────────────────────────────────── */
+  var hNew = [];
+  hNew.push('<table class="loctbl" style="width:100%;border-collapse:collapse;min-width:460px;' +
+    'border:1px solid rgba(0,212,255,0.35);border-radius:10px;overflow:hidden;">');
+  hNew.push(COLGROUP);
+  hNew.push('<tbody><tr class="new-row" id="em-loc-newrow">');
 
   // Entity
-  h.push('<td><select id="em-new-entity" onchange="emLocNewEntityChange(this.value)">');
-  h.push('<option value="">Entity…</option>');
+  hNew.push('<td><select id="em-new-entity" onchange="emLocNewEntityChange(this.value)">');
+  hNew.push('<option value="">Entity…</option>');
   entities.forEach(function(e) {
-    h.push('<option value="' + esc(e) + '"' + (e === _emSelEntity ? ' selected' : '') + '>' + esc(e) + '</option>');
+    hNew.push('<option value="' + esc(e) + '"' + (e === _emSelEntity ? ' selected' : '') + '>' + esc(e) + '</option>');
   });
-  h.push('</select></td>');
+  hNew.push('</select></td>');
 
   // Account (cascade — always enabled, filtered by entity if one is selected)
-  h.push('<td><select id="em-new-account" onchange="emLocNewAccountChange(this.value)">');
-  h.push('<option value="">Account…</option>');
+  hNew.push('<td><select id="em-new-account" onchange="emLocNewAccountChange(this.value)">');
+  hNew.push('<option value="">Account…</option>');
   newRowAccounts.forEach(function(a) {
-    h.push('<option value="' + esc(a) + '"' + (a === _emSelAccount ? ' selected' : '') + '>' + esc(a) + '</option>');
+    hNew.push('<option value="' + esc(a) + '"' + (a === _emSelAccount ? ' selected' : '') + '>' + esc(a) + '</option>');
   });
   if (_emSelAccount && !newRowAccounts.includes(_emSelAccount)) {
-    h.push('<option value="' + esc(_emSelAccount) + '" selected>' + esc(_emSelAccount) + '</option>');
+    hNew.push('<option value="' + esc(_emSelAccount) + '" selected>' + esc(_emSelAccount) + '</option>');
   }
-  h.push('</select></td>');
+  hNew.push('</select></td>');
 
   // Location name (enabled once account chosen)
-  h.push('<td><input type="text" id="em-new-loc" ' +
+  hNew.push('<td><input type="text" id="em-new-loc" ' +
     'placeholder="' + (_emSelAccount ? 'Pickup location name…' : 'Pick account first…') + '" ' +
     (!_emSelAccount ? 'disabled ' : '') +
     'style="opacity:' + (_emSelAccount ? '1' : '0.5') + '" ' +
     'onkeydown="if(event.key===\'Enter\')emLocNewAddRow()"/></td>');
 
   // Add button
-  h.push('<td style="text-align:center;">');
-  h.push('<button onclick="emLocNewAddRow()" ' +
+  hNew.push('<td style="text-align:center;">');
+  hNew.push('<button onclick="emLocNewAddRow()" ' +
     'style="background:rgba(0,212,255,0.15);border:1px solid rgba(0,212,255,0.35);' +
     'color:var(--accent);font-size:15px;font-weight:700;' +
     'border-radius:6px;padding:3px 10px;cursor:pointer;">+</button>');
-  h.push('</td></tr>');
+  hNew.push('</td></tr></tbody></table>');
 
-  h.push('</tbody></table></div></div>');
-  el.innerHTML = h.join('');
+  elNew.innerHTML = hNew.join('');
 }
 
 
