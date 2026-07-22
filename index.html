@@ -1860,7 +1860,8 @@ function closeUploadPreview() {
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
 //const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw5X6qvuPpgppd4ZAS0r9U0cZ7ajuqxVOPjuVnAj601hE2uiGaVbb9FzhTm7YJVWw/exec";
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzNDpWmSuQVM7WUDppsYHpoHl2U1h-ODZxOZL0hu3DAB-cIY1p5TAsBsqFjRBAL7hm/exec"
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw85BxSSBrutzsZX6XlIhGu1TTnfhxKhulT9Q88_fflLp7WeqdYz9A1AmMFm4utsfrd/exec"
+
 // ── STATE ──────────────────────────────────────────────────────
 let session      = { username:"", token:"", role:"", driverName:"", email:"" };
 let allShips     = [];
@@ -3547,11 +3548,9 @@ function emRenderLocations() {
   var allAccounts = _cfg.account || [];
   var eaMap       = _cfg.entityAccountMap || _entityAccountMap || {};
 
-  // Accounts for the new-entry row:
-  // If entity chosen → filtered; otherwise show ALL accounts so user can pick freely
-  var newRowAccounts = _emSelEntity
-    ? (eaMap[_emSelEntity] || allAccounts)
-    : allAccounts;
+  // Accounts for the new-entry row: always show the full account list,
+  // regardless of which entity is selected.
+  var newRowAccounts = allAccounts;
 
   var h = [];
 
@@ -3584,10 +3583,8 @@ function emRenderLocations() {
     _emRows.forEach(function(row, ri) {
       var bg = (ri % 2 === 1) ? 'background:rgba(255,255,255,0.015);' : '';
 
-      // Accounts to show in this row's account dropdown
-      var rowAccounts = (row.entity && row.entity !== '—')
-        ? (eaMap[row.entity] || allAccounts)
-        : allAccounts;
+      // Accounts to show in this row's account dropdown — always the full list
+      var rowAccounts = allAccounts;
 
       h.push('<tr id="emrow-' + ri + '" style="' + bg + '">');
 
@@ -3645,6 +3642,9 @@ function emRenderLocations() {
   newRowAccounts.forEach(function(a) {
     h.push('<option value="' + esc(a) + '"' + (a === _emSelAccount ? ' selected' : '') + '>' + esc(a) + '</option>');
   });
+  if (_emSelAccount && !newRowAccounts.includes(_emSelAccount)) {
+    h.push('<option value="' + esc(_emSelAccount) + '" selected>' + esc(_emSelAccount) + '</option>');
+  }
   h.push('</select></td>');
 
   // Location name (enabled once account chosen)
@@ -3671,12 +3671,9 @@ function emRenderLocations() {
 function emLocRowEditEntity(ri, newEnt) {
   if (!_emRows[ri]) return;
   _emRows[ri].entity = newEnt || "—";
-  // When entity changes, reset account if it no longer belongs to this entity
-  var eaMap = _cfg.entityAccountMap || _entityAccountMap || {};
-  var validAccs = eaMap[newEnt] || [];
-  if (validAccs.length && !validAccs.includes(_emRows[ri].account)) {
-    _emRows[ri].account = "";
-  }
+  // Account selection is left as-is when entity changes — the account
+  // dropdown still shows it (via the fallback option below) even if it
+  // isn't in the newly-selected entity's filtered list.
   _emRowsToLocMap();
   emRenderLocations();
 }
@@ -3702,7 +3699,6 @@ function emLocRowDelete(ri) {
 /* ── New-row handlers ────────────────────────────────────── */
 function emLocNewEntityChange(val) {
   _emSelEntity  = val;
-  _emSelAccount = "";
   emRenderLocations();
 }
 
