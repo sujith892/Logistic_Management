@@ -1889,6 +1889,7 @@ function closeUploadPreview() {
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
 //const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw5X6qvuPpgppd4ZAS0r9U0cZ7ajuqxVOPjuVnAj601hE2uiGaVbb9FzhTm7YJVWw/exec";
+//const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzNDpWmSuQVM7WUDppsYHpoHl2U1h-ODZxOZL0hu3DAB-cIY1p5TAsBsqFjRBAL7hm/exec"
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw85BxSSBrutzsZX6XlIhGu1TTnfhxKhulT9Q88_fflLp7WeqdYz9A1AmMFm4utsfrd/exec";
 // ── STATE ──────────────────────────────────────────────────────
 let session      = { username:"", token:"", role:"", driverName:"", email:"" };
@@ -2395,7 +2396,7 @@ function renderShipments(ships) {
         ${photoBlock}
         <div class="ship-actions" style="flex-direction:column;gap:8px">
           ${renderCheckInBtn(s)}
-          <button class="sab-status" style="width:100%" onclick='openStatus(${JSON.stringify(s)})'>🔄 Update Status</button>
+          <button class="sab-status" style="width:100%" onclick='openStatus(${escJsonAttr(s)})'>🔄 Update Status</button>
         </div>
       </div>`;
     }).join("");
@@ -2452,7 +2453,7 @@ function renderShipments(ships) {
     <tr class="${sc}">
       <td class="td-actions">
         <div class="tbl-actions">
-          <button class="tbl-btn tbl-btn-edit" onclick='openEdit(${JSON.stringify(s)})'>✏ Edit</button>
+          <button class="tbl-btn tbl-btn-edit" onclick='openEdit(${escJsonAttr(s)})'>✏ Edit</button>
           <button class="tbl-btn tbl-btn-del"  onclick="delShipment('${esc(s.ID)}',this)">🗑</button>
         </div>
       </td>
@@ -3038,7 +3039,7 @@ function renderDrivers(users) {
         </div>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-        <button class="tbl-btn tbl-btn-edit" onclick='openEditDriver(${JSON.stringify(u).replace(/"/g,"&quot;")})'>✏ Edit</button>
+        <button class="tbl-btn tbl-btn-edit" onclick='openEditDriver(${escJsonAttr(u)})'>✏ Edit</button>
         ${u.username!==session.username
           ?`<button class="urow-del" onclick="removeDriver('${esc(u.username)}')">Remove</button>`
           :`<span style="font-size:11px;color:var(--accent)">You</span>`}
@@ -4036,6 +4037,17 @@ function applyStatusColor(sel){
 }
 function esc(str){
   return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// Safely embed a JSON object literal inside a single-quoted HTML attribute
+// (e.g. onclick='openEdit(...)'). Any apostrophe in the data (e.g. an
+// account name like "Farmer's Rice") would otherwise prematurely close the
+// attribute and corrupt everything after it — breaking that record's button
+// while unrelated records worked fine. Escaping & and ' as HTML entities
+// here lets the browser decode them back to the original characters before
+// the onclick JS ever runs, so the object always parses correctly.
+function escJsonAttr(obj) {
+  return JSON.stringify(obj).replace(/&/g, "&amp;").replace(/'/g, "&#39;");
 }
 
 // ── SEARCHABLE DROPDOWN ENGINE ─────────────────────────────────
