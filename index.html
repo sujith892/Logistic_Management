@@ -1018,8 +1018,14 @@ body.admin-mode #toast {
     <div class="date-filter-bar" id="dash-filter-bar">
       <button class="dfbtn" id="dash-btn-today" onclick="setDateFilter('today')">Today</button>
       <button class="dfbtn active" id="dash-btn-all"   onclick="setDateFilter('all')">All</button>
-      <input  class="df-date-input" type="date" id="dash-date-pick"
-              onchange="setDateFilter(this.value)" title="Pick a specific date"/>
+    </div>
+    <!-- Always-visible FROM / TO date range -->
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+      <span style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;white-space:nowrap;">FROM</span>
+      <input class="df-date-input" type="date" id="dash-range-from" onchange="applyDashDateRange()" style="flex:1;min-width:120px;" title="From date"/>
+      <span style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;white-space:nowrap;">TO</span>
+      <input class="df-date-input" type="date" id="dash-range-to"   onchange="applyDashDateRange()" style="flex:1;min-width:120px;" title="To date"/>
+      <button class="dfbtn" id="dash-range-clear" onclick="clearDashDateRange()" style="padding:5px 10px;font-size:11px;display:none;">✕</button>
     </div>
     <div class="stats-grid">
       <div class="stat-box"><div class="stat-n" id="dTotal">—</div><div class="stat-l">Total</div></div>
@@ -1889,8 +1895,7 @@ function closeUploadPreview() {
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
 //const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw5X6qvuPpgppd4ZAS0r9U0cZ7ajuqxVOPjuVnAj601hE2uiGaVbb9FzhTm7YJVWw/exec";
-//const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzNDpWmSuQVM7WUDppsYHpoHl2U1h-ODZxOZL0hu3DAB-cIY1p5TAsBsqFjRBAL7hm/exec"
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw85BxSSBrutzsZX6XlIhGu1TTnfhxKhulT9Q88_fflLp7WeqdYz9A1AmMFm4utsfrd/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby2_Ezd3VUSVpv0NqVbmoi-SEV8hBeGBKqJRGvyv2xbBmBBBsbXmm4wQb_AkHq5y7lI/exec"
 // ── STATE ──────────────────────────────────────────────────────
 let session      = { username:"", token:"", role:"", driverName:"", email:"" };
 let allShips     = [];
@@ -1898,6 +1903,8 @@ let activeEntity = "All";
 let activeDateFilter = "all"; // "today" | "all" | "YYYY-MM-DD"
 let shipDateRangeFrom = ""; // "YYYY-MM-DD" | ""
 let shipDateRangeTo   = ""; // "YYYY-MM-DD" | ""
+let dashDateRangeFrom = ""; // "YYYY-MM-DD" | "" — Dashboard's own From/To range
+let dashDateRangeTo   = ""; // "YYYY-MM-DD" | ""
 
 // ── AUTH HELPER ────────────────────────────────────────────────
 function authPayload(extra) {
@@ -2257,7 +2264,7 @@ async function loadShipments() {
 
 // ── DASHBOARD ──────────────────────────────────────────────────
 function renderDashboard(ships) {
-  const filtered = applyDateFilter(ships);
+  const filtered = applyDateFilter(ships, "dash");
   document.getElementById("dTotal").textContent     = filtered.length;
   document.getElementById("dPending").textContent   = filtered.filter(s=>s.Status==="Pending"||s.Status==="In-Progress").length;
   document.getElementById("dTransit").textContent   = filtered.filter(s=>s.Status==="Issue"||s.Status==="Missed Service").length;
@@ -2328,9 +2335,8 @@ async function doCheckIn(shipmentId, actionType, btn) {
 
 function renderShipments(ships) {
   // Apply date filter first, then entity + search
-  // For the Shipments tab: if range is active, use range filter; otherwise use activeDateFilter
-  var usingRange = !!(shipDateRangeFrom || shipDateRangeTo);
-  let filtered = applyDateFilter(ships, usingRange);
+  // For the Shipments tab: if a From/To range is set, use it; otherwise use activeDateFilter
+  let filtered = applyDateFilter(ships, "ship");
 
   const entities = ["All", ...new Set(ships.map(s=>s.Entity).filter(Boolean))];
   const tabsEl   = document.getElementById("entityTabs");
@@ -2582,10 +2588,11 @@ function normDateStr(raw) {
   return "";
 }
 
-// Filter shipments by activeDateFilter (or date range for Shipments tab)
-function applyDateFilter(ships, useRange) {
-  // Range filter (Shipments tab only)
-  if (useRange && (shipDateRangeFrom || shipDateRangeTo)) {
+// Filter shipments by activeDateFilter (or a From/To range for Dashboard or Shipments)
+// mode: "ship" | "dash" | undefined — which tab's range (if any) to apply
+function applyDateFilter(ships, mode) {
+  // Range filter (Shipments tab)
+  if (mode === "ship" && (shipDateRangeFrom || shipDateRangeTo)) {
     return ships.filter(function(s) {
       var raw = s.Date || s.date || "";
       if (!raw) return false;
@@ -2593,6 +2600,18 @@ function applyDateFilter(ships, useRange) {
       if (!nd) return false;
       if (shipDateRangeFrom && nd < shipDateRangeFrom) return false;
       if (shipDateRangeTo   && nd > shipDateRangeTo)   return false;
+      return true;
+    });
+  }
+  // Range filter (Dashboard)
+  if (mode === "dash" && (dashDateRangeFrom || dashDateRangeTo)) {
+    return ships.filter(function(s) {
+      var raw = s.Date || s.date || "";
+      if (!raw) return false;
+      var nd = normDateStr(String(raw));
+      if (!nd) return false;
+      if (dashDateRangeFrom && nd < dashDateRangeFrom) return false;
+      if (dashDateRangeTo   && nd > dashDateRangeTo)   return false;
       return true;
     });
   }
@@ -2655,19 +2674,18 @@ function setDateFilter(value) {
 function syncDateFilterUI() {
   const isToday  = activeDateFilter === "today";
   const isAll    = activeDateFilter === "all";
-  const isCustom = !isToday && !isAll;
-  const today    = todayISO();
 
   // Dashboard bar
   const dbToday = document.getElementById("dash-btn-today");
   const dbAll   = document.getElementById("dash-btn-all");
-  const dbPick  = document.getElementById("dash-date-pick");
   if (dbToday) dbToday.classList.toggle("active", isToday);
   if (dbAll)   dbAll.classList.toggle("active", isAll);
-  if (dbPick)  {
-    dbPick.classList.toggle("active", isCustom);
-    dbPick.value = isCustom ? activeDateFilter : "";
-    dbPick.max   = today;
+  // If we switched to Today/All, clear the Dashboard range inputs too
+  if (isToday || isAll) {
+    dashDateRangeFrom = ""; dashDateRangeTo = "";
+    var df = document.getElementById("dash-range-from"); if (df) { df.value = ""; df.classList.remove("active"); }
+    var dt = document.getElementById("dash-range-to");   if (dt) { dt.value = ""; dt.classList.remove("active"); }
+    var dclr = document.getElementById("dash-range-clear"); if (dclr) dclr.style.display = "none";
   }
 
   // Shipments bar — Today / All buttons; clear range inputs too
@@ -2682,6 +2700,37 @@ function syncDateFilterUI() {
     var rt = document.getElementById("ship-range-to");   if (rt) { rt.value = ""; rt.classList.remove("active"); }
     var clr = document.getElementById("ship-range-clear"); if (clr) clr.style.display = "none";
   }
+}
+
+// Called by the Dashboard's From/To date range inputs
+function applyDashDateRange() {
+  dashDateRangeFrom = (document.getElementById("dash-range-from")||{}).value || "";
+  dashDateRangeTo   = (document.getElementById("dash-range-to")||{}).value   || "";
+  var hasRange = !!(dashDateRangeFrom || dashDateRangeTo);
+  var clr = document.getElementById("dash-range-clear");
+  if (clr) clr.style.display = hasRange ? "" : "none";
+  var fromEl = document.getElementById("dash-range-from");
+  var toEl   = document.getElementById("dash-range-to");
+  if (fromEl) fromEl.classList.toggle("active", !!dashDateRangeFrom);
+  if (toEl)   toEl.classList.toggle("active",   !!dashDateRangeTo);
+  // When a range is set, deactivate Today/All buttons on the Dashboard bar
+  if (hasRange) {
+    var dbToday = document.getElementById("dash-btn-today");
+    var dbAll   = document.getElementById("dash-btn-all");
+    if (dbToday) dbToday.classList.remove("active");
+    if (dbAll)   dbAll.classList.remove("active");
+  }
+  renderDashboard(allShips);
+}
+
+function clearDashDateRange() {
+  dashDateRangeFrom = ""; dashDateRangeTo = "";
+  var f = document.getElementById("dash-range-from"); if (f) { f.value = ""; f.classList.remove("active"); }
+  var t = document.getElementById("dash-range-to");   if (t) { t.value = ""; t.classList.remove("active"); }
+  var clr = document.getElementById("dash-range-clear"); if (clr) clr.style.display = "none";
+  // Restore Today/All indicator on the Dashboard bar (shared activeDateFilter state)
+  syncDateFilterUI();
+  renderDashboard(allShips);
 }
 
 // ── CREATE SHIPMENT ────────────────────────────────────────────
@@ -2712,7 +2761,7 @@ async function createShipment() {
       Recurrence:  recurrence,
     }));
     if (res.success) {
-      toast("✅ Shipment created: "+res.id,"ok");
+      toast("✅ " + (res.message && recurrence ? res.message : "Shipment created: " + res.id), "ok");
       sdReset("c-entity"); sdReset("c-account");
       sdReset("c-assigned"); sdReset("c-service"); sdReset("c-pickup");
       onEntityChange("");  // restore full account list
